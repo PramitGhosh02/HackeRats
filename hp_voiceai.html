@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harry Potter AI — Voice Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/* ═══════════════════════════════════════════════
+   ROOT & RESET
+═══════════════════════════════════════════════ */
+:root {
+  --gold:       #d4af37;
+  --gold-light: #ffd700;
+  --gold-dim:   #a07820;
+  --crimson:    #8b0000;
+  --crimson-l:  #a52a2a;
+  --bg-dark:    #0a0608;
+  --bg-mid:     #120d0f;
+  --surface:    rgba(0,0,0,0.72);
+  --surface2:   rgba(10,6,8,0.85);
+  --border:     rgba(212,175,55,0.25);
+  --border2:    rgba(212,175,55,0.12);
+  --text:       #f5f5dc;
+  --text-dim:   #a09070;
+  --positive:   #4ade80;
+  --negative:   #f87171;
+  --neutral:    #94a3b8;
+  --accent-blue:#60a5fa;
+  --font-title: 'Cinzel Decorative', serif;
+  --font-body:  'Cinzel', serif;
+  --font-prose: 'IM Fell English', serif;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: radial-gradient(ellipse at 30% 20%, #1a0a0f 0%, #0a0608 50%, #080410 100%);
+  min-height: 100vh;
+  font-family: var(--font-body);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* Parchment texture overlay */
+body::before {
+  content:'';
+  position: fixed; inset: 0;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: .6;
+}
+
+/* Floating particles */
+.sparks { position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+.spark {
+  position:absolute; width:2px; height:2px;
+  background: var(--gold-light); border-radius:50%;
+  animation: float-spark linear infinite;
+  opacity: 0;
+}
+@keyframes float-spark {
+  0%   { transform:translateY(100vh) translateX(0) scale(0); opacity:0; }
+  10%  { opacity:.8; }
+  90%  { opacity:.4; }
+  100% { transform:translateY(-10vh) translateX(40px) scale(1.5); opacity:0; }
+}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════ */
+.app-shell {
+  position: relative; z-index: 2;
+  display: grid;
+  grid-template-columns: 270px 1fr 260px;
+  grid-template-rows: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-top: 72px;
+}
+
+/* ═══════════════════════════════════════════════
+   HEADER / NAV
+═══════════════════════════════════════════════ */
+header {
+  position: fixed; top:0; left:0; right:0; z-index:100;
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 12px 40px;
+  background: linear-gradient(180deg, rgba(10,6,8,.97) 0%, rgba(10,6,8,.85) 100%);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+}
+
+.logo {
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(212,175,55,.5);
+  display: flex; align-items:center; gap:10px;
+  letter-spacing: .05em;
+}
+.logo-crest {
+  font-size:1.4rem;
+  animation: crest-glow 3s ease-in-out infinite;
+}
+@keyframes crest-glow {
+  0%,100% { filter:drop-shadow(0 0 4px var(--gold)); }
+  50%      { filter:drop-shadow(0 0 12px var(--gold-light)); }
+}
+
+.house-crests { display:flex; gap:6px; }
+.crest-btn {
+  padding: 4px 12px; border-radius:20px;
+  border: 1px solid var(--border2); background:transparent;
+  font-family: var(--font-body); font-size:.65rem; color:var(--text-dim);
+  cursor:pointer; transition:all .25s; letter-spacing:.08em;
+}
+.crest-btn:hover, .crest-btn.active {
+  border-color: var(--gold); color:var(--gold);
+  background: rgba(212,175,55,.08);
+  text-shadow: 0 0 8px rgba(212,175,55,.5);
+}
+
+.status-orb {
+  display:flex; align-items:center; gap:7px;
+  font-size:.68rem; font-family:var(--font-body); letter-spacing:.1em;
+}
+.status-orb::before {
+  content:''; width:7px; height:7px; border-radius:50%;
+  background: var(--negative); box-shadow: 0 0 6px var(--negative);
+  transition: all .4s;
+}
+.status-orb.online::before { background:var(--positive); box-shadow:0 0 6px var(--positive); }
+.status-orb.online { color:var(--positive); }
+.status-orb.offline { color:var(--text-dim); }
+
+/* ═══════════════════════════════════════════════
+   LEFT PANEL — Divination Chamber
+═══════════════════════════════════════════════ */
+.panel-left {
+  border-right: 1px solid var(--border2);
+  padding: 22px 16px;
+  overflow-y: auto;
+  display:flex; flex-direction:column; gap:14px;
+  background: linear-gradient(180deg, rgba(10,4,6,.6) 0%, transparent 100%);
+}
+.panel-left::-webkit-scrollbar { width:3px; }
+.panel-left::-webkit-scrollbar-thumb { background:var(--gold-dim); border-radius:2px; }
+
+.section-title {
+  font-size: .6rem; letter-spacing:.18em; text-transform:uppercase;
+  color: var(--gold-dim); padding-bottom:8px;
+  border-bottom: 1px solid var(--border2);
+  font-family: var(--font-body);
+}
+
+/* Spell Card (generic card) */
+.spell-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.spell-card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity:.4;
+}
+
+.card-label {
+  font-size:.58rem; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--gold-dim); margin-bottom:10px;
+}
+
+/* Sentiment */
+.aura-display { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.aura-emoji { font-size:1.7rem; }
+.aura-text { font-size:1rem; font-weight:700; }
+.aura-bar-track { height:5px; background:rgba(255,255,255,.06); border-radius:3px; overflow:hidden; }
+.aura-bar-fill { height:100%; border-radius:3px; transition:width .9s ease,background .5s ease; }
+.aura-score { font-size:.65rem; color:var(--text-dim); margin-top:5px; font-family:var(--font-prose); font-style:italic; }
+
+/* Metrics */
+.rune-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.rune-box {
+  background:rgba(0,0,0,.4); border:1px solid var(--border2);
+  border-radius:8px; padding:10px;
+}
+.rune-label { font-size:.55rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px; }
+.rune-value { font-size:1.15rem; font-weight:700; line-height:1; color:var(--gold); }
+.rune-value.crimson { color: #f87171; }
+.rune-value.blue { color: var(--accent-blue); }
+.rune-value.green { color: var(--positive); }
+
+/* Intent scroll */
+.scroll-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.scroll-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:7px 10px; background:rgba(0,0,0,.35);
+  border-radius:7px; font-size:.75rem; cursor:pointer;
+  border-left:2px solid transparent; transition:all .2s;
+}
+.scroll-item:hover { border-left-color:var(--gold-dim); }
+.scroll-item.active { border-left-color:var(--gold); background:rgba(212,175,55,.06); color:var(--gold); }
+.scroll-badge { font-size:.58rem; padding:2px 7px; border-radius:10px; background:rgba(255,255,255,.06); color:var(--text-dim); }
+.scroll-item.active .scroll-badge { background:rgba(212,175,55,.12); color:var(--gold); }
+
+/* Threat detector */
+.threat-safe { display:flex; align-items:center; gap:8px; color:var(--positive); font-size:.8rem; font-weight:600; margin-top:6px; }
+.threat-dot { width:7px; height:7px; border-radius:50%; background:var(--positive); box-shadow:0 0 7px var(--positive); }
+.threat-row { display:flex; align-items:center; gap:8px; margin-top:7px; }
+.threat-row-label { font-size:.6rem; color:var(--text-dim); width:55px; font-family:var(--font-prose); font-style:italic; }
+.threat-bar { flex:1; height:3px; background:rgba(255,255,255,.05); border-radius:2px; overflow:hidden; }
+.threat-bar-fill { height:100%; background:var(--positive); border-radius:2px; transition:width 1s ease; }
+.threat-pct { font-size:.6rem; color:var(--text-dim); width:26px; text-align:right; }
+
+/* ═══════════════════════════════════════════════
+   CENTER PANEL — The Great Hall
+═══════════════════════════════════════════════ */
+.panel-center {
+  display:flex; flex-direction:column; overflow:hidden;
+  background:
+    linear-gradient(180deg, rgba(10,4,6,.3) 0%, transparent 30%),
+    url('https://i.pinimg.com/originals/6d/64/f1/6d64f1f58554f7fcb1c7eec659c50f35.jpg') no-repeat center/cover;
+  position: relative;
+}
+/* Dark veil over background so text stays readable */
+.panel-center::before {
+  content:''; position:absolute; inset:0;
+  background: rgba(5,2,4,.78);
+  pointer-events:none; z-index:0;
+}
+.panel-center > * { position:relative; z-index:1; }
+
+/* Orb Stage */
+.orb-stage {
+  flex: 0 0 260px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border-bottom: 1px solid var(--border2);
+  position:relative;
+}
+.orb-stage::after {
+  content:'';
+  position:absolute; bottom:0; left:10%; right:10%; height:1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity:.3;
+}
+
+.orb-wrap { position:relative; width:130px; height:130px; display:flex; align-items:center; justify-content:center; }
+
+.orb-ring {
+  position:absolute; border-radius:50%;
+  border: 1px solid rgba(212,175,55,.12);
+  animation: ring-pulse 4s ease-in-out infinite;
+}
+.orb-ring:nth-child(1) { width:130px; height:130px; animation-delay:0s; }
+.orb-ring:nth-child(2) { width:170px; height:170px; animation-delay:1s; }
+.orb-ring:nth-child(3) { width:210px; height:210px; animation-delay:2s; }
+@keyframes ring-pulse {
+  0%   { transform:scale(.9); opacity:0; }
+  50%  { opacity:.5; }
+  100% { transform:scale(1.1); opacity:0; }
+}
+.listening .orb-ring { border-color:rgba(212,175,55,.4); animation-duration:1s; }
+.speaking  .orb-ring { border-color:rgba(139,0,0,.5);   animation-duration:1.2s; }
+
+.orb-core {
+  width:86px; height:86px; border-radius:50%;
+  background: radial-gradient(circle at 38% 35%,
+    rgba(212,175,55,.35) 0%, rgba(212,175,55,.08) 55%, transparent 100%);
+  border: 1px solid rgba(212,175,55,.35);
+  position:relative; z-index:2; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .35s ease;
+  box-shadow: 0 0 25px rgba(212,175,55,.1), inset 0 0 25px rgba(212,175,55,.05);
+  font-size:2rem;
+}
+.orb-core:hover {
+  box-shadow: 0 0 50px rgba(212,175,55,.3), inset 0 0 30px rgba(212,175,55,.1);
+  transform:scale(1.06);
+}
+.orb-core.listening {
+  background: radial-gradient(circle at 38% 35%, rgba(212,175,55,.6), rgba(212,175,55,.12) 60%, transparent);
+  border-color:var(--gold); animation:orb-breathe 1s ease-in-out infinite;
+  box-shadow:0 0 60px rgba(212,175,55,.45), inset 0 0 30px rgba(212,175,55,.15);
+}
+.orb-core.speaking {
+  background: radial-gradient(circle at 38% 35%, rgba(139,0,0,.6), rgba(139,0,0,.12) 60%, transparent);
+  border-color:var(--crimson); animation:orb-breathe .8s ease-in-out infinite;
+  box-shadow:0 0 60px rgba(139,0,0,.4), inset 0 0 30px rgba(139,0,0,.12);
+}
+.orb-core.loading {
+  border-color:var(--accent-blue);
+  box-shadow:0 0 40px rgba(96,165,250,.3);
+  animation:orb-spin 1.5s linear infinite;
+}
+@keyframes orb-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.09)} }
+@keyframes orb-spin { from{filter:hue-rotate(0deg)} to{filter:hue-rotate(360deg)} }
+
+/* Waveform */
+.waveform { display:flex; align-items:center; gap:3px; height:32px; margin-top:14px; }
+.wave-bar { width:3px; border-radius:2px; background:var(--gold); opacity:.25; }
+.waveform.active .wave-bar { opacity:.9; animation:wave-anim .7s ease-in-out infinite; }
+.wave-bar:nth-child(odd) { animation-delay:.1s !important; }
+@keyframes wave-anim { 0%,100%{height:5px} 50%{height:26px} }
+
+.orb-caption {
+  margin-top:10px; font-size:.68rem; letter-spacing:.12em;
+  font-family:var(--font-body); color:var(--text-dim); text-align:center;
+  font-style:italic;
+}
+.orb-caption.casting { color:var(--gold); }
+.orb-caption.speaking { color:#f87171; }
+.orb-caption.loading { color:var(--accent-blue); }
+
+.spell-controls { display:flex; align-items:center; gap:10px; margin-top:12px; }
+.btn-mic {
+  width:42px; height:42px; border-radius:50%;
+  border:1px solid var(--gold); background:rgba(212,175,55,.07);
+  color:var(--gold); font-size:1rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:all .2s;
+}
+.btn-mic:hover{background:rgba(212,175,55,.18);transform:scale(1.05)}
+.btn-mic.active{background:var(--gold);color:#0a0608;box-shadow:0 0 18px rgba(212,175,55,.5)}
+.btn-end {
+  padding:9px 18px; border-radius:20px;
+  border:1px solid rgba(139,0,0,.5); background:rgba(139,0,0,.08);
+  color:#f87171; font-size:.65rem; font-family:var(--font-body);
+  letter-spacing:.1em; cursor:pointer; transition:all .2s;
+}
+.btn-end:hover{background:rgba(139,0,0,.18)}
+
+/* Error banner */
+.err-scroll {
+  margin:8px 16px 0; padding:8px 14px;
+  background:rgba(139,0,0,.12); border:1px solid rgba(139,0,0,.3);
+  border-radius:8px; font-size:.7rem; font-family:var(--font-prose);
+  font-style:italic; color:#fca5a5; display:none;
+}
+.err-scroll.show{display:block}
+
+/* Messages */
+.messages {
+  flex:1; overflow-y:auto; padding:16px;
+  display:flex; flex-direction:column; gap:12px;
+}
+.messages::-webkit-scrollbar{width:3px}
+.messages::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:2px}
+
+.message { display:flex; gap:10px; animation:msg-appear .35s ease forwards; max-width:82%; }
+@keyframes msg-appear { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.message.user   { align-self:flex-end; flex-direction:row-reverse; }
+.message.bot    { align-self:flex-start; }
+
+.avatar {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:1.2rem;
+  border:1px solid var(--border2);
+}
+.message.bot  .avatar { background:rgba(139,0,0,.25); }
+.message.user .avatar { background:rgba(212,175,55,.12); }
+
+.bubble {
+  padding:11px 15px; border-radius:18px; line-height:1.55;
+  word-wrap:break-word; font-family:var(--font-prose); font-size:.9rem;
+}
+.bubble.bot {
+  background:rgba(0,0,0,.75); color:var(--gold);
+  border:1px solid rgba(212,175,55,.2); border-bottom-left-radius:4px;
+  text-shadow:0 0 5px rgba(212,175,55,.25);
+}
+.bubble.user {
+  background:rgba(139,0,0,.75); color:var(--gold-light);
+  border:1px solid rgba(212,175,55,.15); border-bottom-right-radius:4px;
+  text-shadow:0 0 3px rgba(255,215,0,.25);
+}
+.msg-time { font-size:.58rem; color:var(--text-dim); margin-top:4px; font-family:var(--font-body); }
+.message.user .msg-time { text-align:right; }
+
+/* Typing */
+.typing-dots { display:flex; gap:5px; padding:3px 0; }
+.typing-dot {
+  width:7px; height:7px; border-radius:50%; background:var(--gold);
+  animation:typing-bounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2){animation-delay:.2s} .typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typing-bounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-7px);opacity:1} }
+
+/* Input area */
+.input-area {
+  padding:12px 16px; border-top:1px solid var(--border2);
+  display:flex; gap:8px; align-items:center;
+  background:rgba(5,2,4,.88); backdrop-filter:blur(12px);
+}
+.spell-input {
+  flex:1; background:rgba(0,0,0,.5);
+  border:1px solid rgba(212,175,55,.2); border-radius:25px;
+  padding:10px 16px; color:var(--gold-light); font-family:var(--font-prose);
+  font-size:.9rem; outline:none; transition:border-color .25s;
+  caret-color:var(--gold);
+}
+.spell-input:focus{border-color:rgba(212,175,55,.5)}
+.spell-input::placeholder{color:var(--text-dim);font-style:italic}
+.btn-cast {
+  width:40px; height:40px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg, var(--crimson), #6b0000);
+  border:1px solid rgba(212,175,55,.3); color:var(--gold-light);
+  font-size:1rem; cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 12px rgba(139,0,0,.4);
+}
+.btn-cast:hover{transform:scale(1.08);box-shadow:0 0 20px rgba(139,0,0,.6)}
+
+/* ═══════════════════════════════════════════════
+   RIGHT PANEL — The Owl Post
+═══════════════════════════════════════════════ */
+.panel-right {
+  border-left:1px solid var(--border2);
+  padding:22px 16px; overflow-y:auto;
+  display:flex; flex-direction:column; gap:14px;
+  background: linear-gradient(180deg, rgba(10,4,6,.6) 0%, transparent 100%);
+}
+.panel-right::-webkit-scrollbar{width:3px}
+.panel-right::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:2px}
+
+/* Session parchment */
+.parchment-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:6px 0; border-bottom:1px solid var(--border2); font-size:.75rem;
+}
+.parchment-row:last-child{border-bottom:none}
+.parchment-key { color:var(--text-dim); font-size:.62rem; letter-spacing:.08em; text-transform:uppercase; }
+.parchment-val { font-weight:600; font-size:.7rem; color:var(--gold); }
+.parchment-val.live { color:var(--positive); }
+.parchment-val.danger { color:var(--negative); }
+
+/* Escalation */
+.dark-mark {
+  background:rgba(139,0,0,.1); border:1px solid rgba(139,0,0,.3);
+  border-radius:10px; padding:13px; display:none;
+}
+.dark-mark.show{display:block}
+.dark-mark-title { color:#f87171; font-size:.75rem; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+.dark-mark-text { font-size:.72rem; color:#fca5a5; line-height:1.4; margin-bottom:10px; font-family:var(--font-prose); font-style:italic; }
+.btn-patronus {
+  width:100%; padding:8px; border-radius:8px;
+  background:rgba(139,0,0,.15); border:1px solid rgba(139,0,0,.4);
+  color:#f87171; font-size:.68rem; font-family:var(--font-body);
+  letter-spacing:.08em; cursor:pointer; transition:all .2s;
+}
+.btn-patronus:hover{background:rgba(139,0,0,.28)}
+
+/* Language map */
+.lang-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid rgba(255,255,255,.04); font-size:.8rem; }
+.lang-row:last-child{border-bottom:none}
+.lang-name-label { font-size:.7rem; color:var(--text); }
+.lang-bar-wrap { display:flex; align-items:center; gap:7px; }
+.lang-mini-bar { width:44px; height:3px; background:rgba(255,255,255,.06); border-radius:2px; overflow:hidden; }
+.lang-mini-fill { height:100%; background:var(--gold); border-radius:2px; transition:width .8s ease; }
+.lang-mini-pct { font-size:.62rem; color:var(--text-dim); width:24px; text-align:right; }
+
+/* Follow-ups */
+.prophecy-list { display:flex; flex-direction:column; gap:7px; margin-top:10px; }
+.prophecy-btn {
+  width:100%; text-align:left; padding:9px 12px;
+  background:rgba(0,0,0,.4); border:1px solid var(--border2);
+  border-radius:8px; color:var(--text); font-size:.73rem;
+  font-family:var(--font-prose); font-style:italic; cursor:pointer; transition:all .2s; line-height:1.4;
+}
+.prophecy-btn:hover{border-color:rgba(212,175,55,.35);background:rgba(212,175,55,.05);color:var(--gold)}
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+.toast {
+  position:fixed; bottom:30px; left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:rgba(10,6,8,.95); border:1px solid var(--gold);
+  border-radius:10px; padding:10px 20px;
+  font-size:.75rem; font-family:var(--font-body); color:var(--gold);
+  text-shadow:0 0 8px rgba(212,175,55,.4);
+  opacity:0; transition:all .3s ease;
+  z-index:300; pointer-events:none; white-space:nowrap;
+  letter-spacing:.06em;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media(max-width:1080px){.panel-left,.panel-right{display:none}.app-shell{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- Floating sparks -->
+<div class="sparks" id="sparks"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <span class="logo-crest">⚡</span>
+    <span>Harry Potter AI</span>
+  </div>
+  <div class="house-crests">
+    <button class="crest-btn active" onclick="setLang(this,'en')">🦁 EN</button>
+    <button class="crest-btn" onclick="setLang(this,'hi')">🐍 हिं</button>
+    <button class="crest-btn" onclick="setLang(this,'ta')">🦅 தமி</button>
+    <button class="crest-btn" onclick="setLang(this,'te')">🦡 తె</button>
+    <button class="crest-btn" onclick="setLang(this,'bn')">🦁 বাং</button>
+    <button class="crest-btn" onclick="setLang(this,'mr')">🐍 मर</button>
+  </div>
+  <div class="status-orb offline" id="statusOrb">Awaiting magic…</div>
+</header>
+
+<!-- APP -->
+<div class="app-shell">
+
+  <!-- LEFT: Divination Chamber -->
+  <div class="panel-left">
+    <div class="section-title">✦ Divination Chamber</div>
+
+    <!-- Aura / Sentiment -->
+    <div class="spell-card">
+      <div class="card-label">Emotional Aura</div>
+      <div class="aura-display">
+        <div class="aura-emoji" id="auraEmoji">😐</div>
+        <div><div class="aura-text" id="auraLabel" style="color:var(--neutral)">Neutral</div></div>
+      </div>
+      <div class="aura-bar-track"><div class="aura-bar-fill" id="auraBar" style="width:50%;background:var(--neutral)"></div></div>
+      <div class="aura-score">Polarity: <span id="auraScore">0.00</span></div>
+    </div>
+
+    <!-- Rune metrics -->
+    <div class="rune-grid">
+      <div class="rune-box"><div class="rune-label">Exchanges</div><div class="rune-value" id="turnCount">0</div></div>
+      <div class="rune-box"><div class="rune-label">Duration</div><div class="rune-value blue" id="duration">00:00</div></div>
+      <div class="rune-box"><div class="rune-label">Tongue</div><div class="rune-value" id="tongueVal" style="font-size:.85rem">English</div></div>
+      <div class="rune-box"><div class="rune-label">Latency</div><div class="rune-value green" id="latencyVal">—</div></div>
+    </div>
+
+    <!-- Intent scroll -->
+    <div class="spell-card">
+      <div class="card-label">Intent Scroll</div>
+      <div class="scroll-list">
+        <div class="scroll-item" id="intent-greeting">Greeting <span class="scroll-badge">—</span></div>
+        <div class="scroll-item" id="intent-support">Support <span class="scroll-badge">—</span></div>
+        <div class="scroll-item" id="intent-complaint">Complaint <span class="scroll-badge">—</span></div>
+        <div class="scroll-item" id="intent-query">Query <span class="scroll-badge">—</span></div>
+        <div class="scroll-item" id="intent-farewell">Farewell <span class="scroll-badge">—</span></div>
+      </div>
+    </div>
+
+    <!-- Threat -->
+    <div class="spell-card">
+      <div class="card-label">Dark Arts Detector</div>
+      <div class="threat-safe"><div class="threat-dot" id="threatDot"></div><span id="threatStatus">No dark magic detected</span></div>
+      <div class="threat-row"><div class="threat-row-label">Curse risk</div><div class="threat-bar"><div class="threat-bar-fill" id="threatScam" style="width:0%"></div></div><div class="threat-pct" id="threatScamPct">0%</div></div>
+      <div class="threat-row"><div class="threat-row-label">Dark urgency</div><div class="threat-bar"><div class="threat-bar-fill" id="threatUrgency" style="width:0%"></div></div><div class="threat-pct" id="threatUrgencyPct">0%</div></div>
+    </div>
+  </div>
+
+  <!-- CENTER: The Great Hall -->
+  <div class="panel-center">
+
+    <!-- Orb stage -->
+    <div class="orb-stage">
+      <div class="orb-wrap" id="orbWrap">
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-core" id="orbCore" onclick="toggleListen()">🔮</div>
+      </div>
+
+      <div class="waveform" id="waveform">
+        <div class="wave-bar" style="height:6px"></div>
+        <div class="wave-bar" style="height:12px"></div>
+        <div class="wave-bar" style="height:20px"></div>
+        <div class="wave-bar" style="height:26px"></div>
+        <div class="wave-bar" style="height:16px"></div>
+        <div class="wave-bar" style="height:22px"></div>
+        <div class="wave-bar" style="height:30px"></div>
+        <div class="wave-bar" style="height:20px"></div>
+        <div class="wave-bar" style="height:26px"></div>
+        <div class="wave-bar" style="height:14px"></div>
+        <div class="wave-bar" style="height:20px"></div>
+        <div class="wave-bar" style="height:28px"></div>
+        <div class="wave-bar" style="height:16px"></div>
+        <div class="wave-bar" style="height:10px"></div>
+        <div class="wave-bar" style="height:6px"></div>
+      </div>
+
+      <div class="orb-caption" id="orbCaption">Tap the orb to speak your spell</div>
+      <div class="spell-controls">
+        <button class="btn-mic" id="btnMic" onclick="toggleListen()" title="Voice spell">🎤</button>
+        <button class="btn-end" onclick="endSession()">✦ End Session</button>
+      </div>
+    </div>
+
+    <div class="err-scroll" id="errScroll"></div>
+
+    <!-- Messages -->
+    <div class="messages" id="messages"></div>
+
+    <!-- Input -->
+    <div class="input-area">
+      <input class="spell-input" id="spellInput" type="text"
+        placeholder="Cast your spell… or speak aloud 🪄"
+        onkeydown="if(event.key==='Enter') sendSpell()">
+      <button class="btn-cast" onclick="sendSpell()" title="Cast">🪄</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Owl Post -->
+  <div class="panel-right">
+    <div class="section-title">✦ Owl Post Records</div>
+
+    <!-- Session -->
+    <div class="spell-card">
+      <div class="parchment-row"><span class="parchment-key">Session Scroll</span><span class="parchment-val" id="sessionIdEl">—</span></div>
+      <div class="parchment-row"><span class="parchment-key">Status</span><span class="parchment-val live" id="sessionStatus">● Connecting</span></div>
+      <div class="parchment-row"><span class="parchment-key">Oracle</span><span class="parchment-val">llama-3.3-70b</span></div>
+      <div class="parchment-row"><span class="parchment-key">Ear Charm</span><span class="parchment-val">Whisper STT</span></div>
+      <div class="parchment-row"><span class="parchment-key">Voice Spell</span><span class="parchment-val">ElevenLabs TTS</span></div>
+      <div class="parchment-row"><span class="parchment-key">Exchanges</span><span class="parchment-val" id="turnCountRight">0</span></div>
+    </div>
+
+    <!-- Dark mark / escalation -->
+    <div class="dark-mark" id="darkMark">
+      <div class="dark-mark-title">☠️ Escalation Needed</div>
+      <div class="dark-mark-text">Dark sentiment detected across multiple exchanges. A human wizard may handle this better.</div>
+      <button class="btn-patronus">✦ Summon Human Agent</button>
+    </div>
+
+    <!-- Language detection -->
+    <div class="spell-card">
+      <div class="card-label">Tongue Detection</div>
+      <div class="lang-row"><span class="lang-name-label">English</span><div class="lang-bar-wrap"><div class="lang-mini-bar"><div class="lang-mini-fill" id="lEn" style="width:0%"></div></div><span class="lang-mini-pct" id="lEnPct">—</span></div></div>
+      <div class="lang-row"><span class="lang-name-label">हिन्दी</span><div class="lang-bar-wrap"><div class="lang-mini-bar"><div class="lang-mini-fill" id="lHi" style="width:0%"></div></div><span class="lang-mini-pct" id="lHiPct">—</span></div></div>
+      <div class="lang-row"><span class="lang-name-label">தமிழ்</span><div class="lang-bar-wrap"><div class="lang-mini-bar"><div class="lang-mini-fill" id="lTa" style="width:0%"></div></div><span class="lang-mini-pct" id="lTaPct">—</span></div></div>
+      <div class="lang-row"><span class="lang-name-label">తెలుగు</span><div class="lang-bar-wrap"><div class="lang-mini-bar"><div class="lang-mini-fill" id="lTe" style="width:0%"></div></div><span class="lang-mini-pct" id="lTePct">—</span></div></div>
+    </div>
+
+    <!-- Prophecy / follow-ups -->
+    <div class="spell-card">
+      <div class="card-label">Prophecy Suggestions</div>
+      <div class="prophecy-list" id="prophecyList">
+        <button class="prophecy-btn" onclick="useProphecy(this)">What spells do you know?</button>
+        <button class="prophecy-btn" onclick="useProphecy(this)">Tell me about Hogwarts.</button>
+        <button class="prophecy-btn" onclick="useProphecy(this)">Speak to a human wizard.</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   CONFIG — point to your FastAPI backend
+══════════════════════════════════════════════════════ */
+const API_BASE = 'http://localhost:8000';
+  
+/* ══════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════ */
+const S = {
+  sessionId:   null,
+  lang:        'en',
+  isListening: false,
+  isSpeaking:  false,
+  sessionStart: Date.now(),
+  turns:       0,
+  recognition: null,
+  mediaRecorder: null,
+  audioChunks: [],
+  timer:       null,
+};
+
+const LANG_NAMES = { en:'English', hi:'Hindi', ta:'Tamil', te:'Telugu', bn:'Bengali', mr:'Marathi' };
+
+/* ══════════════════════════════════════════════════════
+   SPARKS (floating gold particles)
+══════════════════════════════════════════════════════ */
+(function initSparks() {
+  const c = document.getElementById('sparks');
+  for (let i = 0; i < 22; i++) {
+    const s = document.createElement('div');
+    s.className = 'spark';
+    s.style.left   = Math.random() * 100 + 'vw';
+    s.style.width  = (1 + Math.random() * 2.5) + 'px';
+    s.style.height = s.style.width;
+    s.style.animationDuration = (6 + Math.random() * 14) + 's';
+    s.style.animationDelay    = (Math.random() * 10) + 's';
+    c.appendChild(s);
+  }
+})();
+
+/* ══════════════════════════════════════════════════════
+   BACKEND HEALTH CHECK
+══════════════════════════════════════════════════════ */
+async function checkBackend() {
+  try {
+    const r = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+    if (!r.ok) throw new Error();
+    setOnline(true);
+    appendMessage('🧙‍♂️ Greetings, young witch or wizard! I am your magical AI companion. Speak freely or type your question below. How may I assist you today? ✨', 'bot');
+  } catch {
+    setOnline(false);
+    appendMessage('⚠️ The Floo Network is down. Ensure your FastAPI server is running:\n  uvicorn app.main:app --reload --port 8000', 'bot');
+    showErr(`Cannot reach ${API_BASE} — is your FastAPI server running?`);
+  }
+}
+
+function setOnline(online) {
+  const orb = document.getElementById('statusOrb');
+  orb.className = 'status-orb ' + (online ? 'online' : 'offline');
+  orb.textContent = online ? 'Magic Online' : 'Floo Network Down';
+  document.getElementById('sessionStatus').textContent = online ? '● Active' : '✗ Offline';
+}
+
+/* ══════════════════════════════════════════════════════
+   API → FastAPI
+══════════════════════════════════════════════════════ */
+async function callChat(message) {
+  const t0 = Date.now();
+  const res = await fetch(`${API_BASE}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, language: S.lang, session_id: S.sessionId || undefined }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const ms = Date.now() - t0;
+  if (!S.sessionId && data.session_id) {
+    S.sessionId = data.session_id;
+    document.getElementById('sessionIdEl').textContent = data.session_id.slice(0,10)+'…';
+  }
+  document.getElementById('latencyVal').textContent = ms + 'ms';
+  return data;
+}
+
+async function callVoice(blob) {
+  const t0 = Date.now();
+  const fd = new FormData();
+  fd.append('audio', blob, 'recording.wav');
+  fd.append('language', S.lang);
+  if (S.sessionId) fd.append('session_id', S.sessionId);
+  const res = await fetch(`${API_BASE}/api/voice`, { method: 'POST', body: fd });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const ms = Date.now() - t0;
+  if (!S.sessionId && data.session_id) {
+    S.sessionId = data.session_id;
+    document.getElementById('sessionIdEl').textContent = data.session_id.slice(0,10)+'…';
+  }
+  document.getElementById('latencyVal').textContent = ms + 'ms';
+  return data;
+}
+
+/* ══════════════════════════════════════════════════════
+   SEND SPELL (text)
+══════════════════════════════════════════════════════ */
+async function sendSpell() {
+  const inp = document.getElementById('spellInput');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+
+  appendMessage(text, 'user');
+  const tid = showTyping();
+
+  try {
+    const data = await callChat(text);
+    removeTyping(tid);
+    appendMessage(data.response, 'bot');
+    speakText(data.response);
+    if (data.sentiment)            updateAura(data.sentiment);
+    if (data.intent)               updateIntent(data.intent);
+    if (data.follow_up_suggestions) updateProphecies(data.follow_up_suggestions);
+    if (data.should_escalate)      document.getElementById('darkMark').classList.add('show');
+    updateFraudUI(text);
+    bumpTurns();
+    hideErr();
+  } catch(e) {
+    removeTyping(tid);
+    appendMessage('⚠️ The enchantment failed. Check your Floo connection.', 'bot');
+    showErr(e.message);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   VOICE INPUT
+══════════════════════════════════════════════════════ */
+function toggleListen() {
+  if (S.isSpeaking) return;
+  S.isListening ? stopListening() : startListening();
+}
+
+async function startListening() {
+  // Try real audio recording → /api/voice
+  if (navigator.mediaDevices && window.MediaRecorder) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      S.audioChunks = [];
+      S.mediaRecorder = new MediaRecorder(stream);
+      S.mediaRecorder.ondataavailable = e => S.audioChunks.push(e.data);
+      S.mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(S.audioChunks, { type: 'audio/wav' });
+        await processVoiceBlob(blob);
+      };
+      S.mediaRecorder.start();
+      S.isListening = true;
+      setOrbState('listening');
+      showToast('🎤 Casting ear charm… tap again to send');
+      return;
+    } catch {}
+  }
+  // Fallback: Web Speech → text → /api/chat
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    S.recognition = new SR();
+    const lmap = { en:'en-IN', hi:'hi-IN', ta:'ta-IN', te:'te-IN', bn:'bn-IN', mr:'mr-IN' };
+    S.recognition.lang = lmap[S.lang] || 'en-IN';
+    S.recognition.continuous = false; S.recognition.interimResults = true;
+    S.recognition.onresult = e => {
+      document.getElementById('spellInput').value = Array.from(e.results).map(r=>r[0].transcript).join('');
+    };
+    S.recognition.onend = () => {
+      const v = document.getElementById('spellInput').value.trim();
+      stopListening();
+      if (v) sendSpell();
+    };
+    S.recognition.start();
+    S.isListening = true;
+    setOrbState('listening');
+    showToast('🎤 Speak your spell…');
+  } else {
+    showToast('No voice magic available in this browser');
+  }
+}
+
+function stopListening() {
+  if (S.mediaRecorder && S.mediaRecorder.state !== 'inactive') S.mediaRecorder.stop();
+  if (S.recognition) { try { S.recognition.stop(); } catch {} }
+  S.isListening = false;
+  setOrbState('idle');
+}
+
+async function processVoiceBlob(blob) {
+  setOrbState('loading');
+  const tid = showTyping();
+  try {
+    const data = await callVoice(blob);
+    removeTyping(tid);
+    if (data.transcript) appendMessage(data.transcript, 'user');
+    appendMessage(data.response_text, 'bot');
+    if (data.audio_base64) playBase64Audio(data.audio_base64);
+    else speakText(data.response_text);
+    if (data.sentiment)   updateAura(data.sentiment);
+    if (data.intent)      updateIntent(data.intent);
+    if (data.should_escalate) document.getElementById('darkMark').classList.add('show');
+    bumpTurns();
+    setOrbState('idle');
+    hideErr();
+  } catch(e) {
+    removeTyping(tid);
+    appendMessage('⚠️ Voice spell interrupted. Try typing instead.', 'bot');
+    showErr(e.message);
+    setOrbState('idle');
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   AUDIO
+══════════════════════════════════════════════════════ */
+function playBase64Audio(b64) {
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type:'audio/mpeg' }));
+  const audio = new Audio(url);
+  audio.onplay  = () => { S.isSpeaking = true; setOrbState('speaking'); };
+  audio.onended = () => { S.isSpeaking = false; setOrbState('idle'); URL.revokeObjectURL(url); };
+  audio.play().catch(() => speakText(''));
+}
+
+function speakText(text) {
+  if (!('speechSynthesis' in window) || !text) return;
+  const u = new SpeechSynthesisUtterance(text);
+  const lm = { en:'en-IN', hi:'hi-IN', ta:'ta-IN', te:'te-IN', bn:'bn-IN', mr:'mr-IN' };
+  u.lang = lm[S.lang] || 'en-IN';
+  u.rate = 0.95; u.pitch = 1.05;
+  u.onstart = () => { S.isSpeaking = true; setOrbState('speaking'); };
+  u.onend   = () => { S.isSpeaking = false; setOrbState('idle'); };
+  window.speechSynthesis.speak(u);
+}
+
+/* ══════════════════════════════════════════════════════
+   UI HELPERS
+══════════════════════════════════════════════════════ */
+function appendMessage(text, sender) {
+  const box = document.getElementById('messages');
+  const wrap = document.createElement('div');
+  wrap.className = `message ${sender}`;
+  const time = new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'});
+  wrap.innerHTML = `
+    <div class="avatar">${sender==='bot'?'🧙‍♂️':'🧙‍♀️'}</div>
+    <div>
+      <div class="bubble ${sender}">${text}</div>
+      <div class="msg-time">${time} · ${LANG_NAMES[S.lang]}</div>
+    </div>`;
+  box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+}
+
+function showTyping() {
+  const box = document.getElementById('messages');
+  const id = 'typing_' + Date.now();
+  const wrap = document.createElement('div');
+  wrap.className = 'message bot'; wrap.id = id;
+  wrap.innerHTML = `<div class="avatar">🧙‍♂️</div><div><div class="bubble bot"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;
+  box.appendChild(wrap); box.scrollTop = box.scrollHeight;
+  return id;
+}
+function removeTyping(id) { const e=document.getElementById(id); if(e) e.remove(); }
+
+function setOrbState(mode) {
+  const core    = document.getElementById('orbCore');
+  const caption = document.getElementById('orbCaption');
+  const wf      = document.getElementById('waveform');
+  const mic     = document.getElementById('btnMic');
+  const wrap    = document.getElementById('orbWrap');
+
+  core.classList.remove('listening','speaking','loading');
+  wf.classList.remove('active');
+  wrap.classList.remove('listening','speaking');
+
+  if (mode === 'listening') {
+    core.classList.add('listening'); core.textContent = '🎤';
+    caption.textContent = '● Listening for your spell…'; caption.className = 'orb-caption casting';
+    wf.classList.add('active'); mic.classList.add('active');
+    wrap.classList.add('listening');
+  } else if (mode === 'speaking') {
+    core.classList.add('speaking'); core.textContent = '🔊';
+    caption.textContent = '◎ The wizard speaks…'; caption.className = 'orb-caption speaking';
+    wf.classList.add('active'); mic.classList.remove('active');
+    wrap.classList.add('speaking');
+  } else if (mode === 'loading') {
+    core.classList.add('loading'); core.textContent = '⏳';
+    caption.textContent = 'Consulting the oracle…'; caption.className = 'orb-caption loading';
+    wf.classList.add('active');
+  } else {
+    core.textContent = '🔮';
+    caption.textContent = 'Tap the orb to speak your spell'; caption.className = 'orb-caption';
+    mic.classList.remove('active');
+  }
+}
+
+function updateAura(sentiment) {
+  const score = sentiment.score || 0;
+  const label = sentiment.label || 'neutral';
+  const emotion = sentiment.emotion || label;
+  const pct = Math.round((score + 1) / 2 * 100);
+  const cfg = {
+    positive: { emoji:'😊', color:'var(--positive)' },
+    negative: { emoji:'😠', color:'var(--negative)' },
+    neutral:  { emoji:'😐', color:'var(--neutral)' },
+  }[label] || { emoji:'😐', color:'var(--neutral)' };
+
+  document.getElementById('auraScore').textContent = (score>=0?'+':'') + score.toFixed(2);
+  const bar = document.getElementById('auraBar');
+  bar.style.width = pct + '%'; bar.style.background = cfg.color;
+  const lbl = document.getElementById('auraLabel');
+  lbl.textContent = emotion; lbl.style.color = cfg.color;
+  document.getElementById('auraEmoji').textContent = cfg.emoji;
+}
+
+function updateIntent(intent) {
+  document.querySelectorAll('.scroll-item').forEach(el => {
+    el.classList.remove('active');
+    el.querySelector('.scroll-badge').textContent = '—';
+  });
+  const el = document.getElementById('intent-' + intent);
+  if (el) { el.classList.add('active'); el.querySelector('.scroll-badge').textContent = '✓'; }
+}
+
+function updateProphecies(suggestions) {
+  if (!suggestions?.length) return;
+  document.getElementById('prophecyList').innerHTML =
+    suggestions.slice(0,3).map(q =>
+      `<button class="prophecy-btn" onclick="useProphecy(this)">${q}</button>`
+    ).join('');
+}
+
+function updateFraudUI(text) {
+  const words = ['scam','fake','hack','unauthorized','steal','fraud','curse','dark arts'];
+  const hasDark = words.some(w => text.toLowerCase().includes(w));
+  if (hasDark) {
+    document.getElementById('threatScam').style.width = '80%';
+    document.getElementById('threatScam').style.background = 'var(--negative)';
+    document.getElementById('threatScamPct').textContent = '80%';
+    document.getElementById('threatDot').style.background = 'var(--negative)';
+    document.getElementById('threatDot').style.boxShadow = '0 0 7px var(--negative)';
+    document.getElementById('threatStatus').textContent = '⚠ Dark magic detected!';
+    document.getElementById('threatStatus').style.color = 'var(--negative)';
+    showToast('⚠️ Dark arts keywords detected!');
+  }
+}
+
+function bumpTurns() {
+  S.turns++;
+  document.getElementById('turnCount').textContent = S.turns;
+  document.getElementById('turnCountRight').textContent = S.turns;
+}
+
+function useProphecy(btn) {
+  document.getElementById('spellInput').value = btn.textContent;
+  sendSpell();
+}
+
+function setLang(el, code) {
+  document.querySelectorAll('.crest-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  S.lang = code;
+  document.getElementById('tongueVal').textContent = LANG_NAMES[code];
+
+  // Update detection bars
+  ['en','hi','ta','te'].forEach(l => {
+    const pct = l === code ? 94 : Math.floor(Math.random() * 15);
+    const bar = document.getElementById('l' + l.charAt(0).toUpperCase() + l.slice(1));
+    const pctEl = document.getElementById('l' + l.charAt(0).toUpperCase() + l.slice(1) + 'Pct');
+    if (bar) bar.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+  });
+  showToast(`✦ Tongue set: ${LANG_NAMES[code]}`);
+}
+
+function endSession() {
+  stopListening();
+  window.speechSynthesis.cancel();
+  S.isSpeaking = false;
+  setOrbState('idle');
+  clearInterval(S.timer);
+  document.getElementById('sessionStatus').textContent = '■ Ended';
+  document.getElementById('sessionStatus').style.color = 'var(--text-dim)';
+  showToast('✦ Session ended. The scroll has been sealed.');
+}
+
+function showErr(msg) {
+  const b = document.getElementById('errScroll');
+  b.textContent = '⚠ ' + msg; b.classList.add('show');
+}
+function hideErr() { document.getElementById('errScroll').classList.remove('show'); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ══════════════════════════════════════════════════════
+   TIMER & INIT
+══════════════════════════════════════════════════════ */
+S.timer = setInterval(() => {
+  const e = Math.floor((Date.now() - S.sessionStart) / 1000);
+  const m = String(Math.floor(e/60)).padStart(2,'0');
+  const s = String(e%60).padStart(2,'0');
+  document.getElementById('duration').textContent = `${m}:${s}`;
+}, 1000);
+
+// Randomise waveform heights
+document.querySelectorAll('.wave-bar').forEach(b => {
+  b.style.height = (4 + Math.floor(Math.random() * 26)) + 'px';
+});
+
+checkBackend();
+</script>
+</body>
+</html>
