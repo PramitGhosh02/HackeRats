@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: voiceai_postgres
+    environment:
+      POSTGRES_USER: voiceai_user
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: voiceai_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voiceai_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - voiceai_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: voiceai_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - voiceai_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voiceai_backend
+    environment:
+      - DATABASE_URL=postgresql://voiceai_user:password123@postgres:5432/voiceai_db
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+      - DEBUG=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - voiceai_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: voiceai_frontend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - voiceai_network
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voiceai_celery_worker
+    environment:
+      - DATABASE_URL=postgresql://voiceai_user:password123@postgres:5432/voiceai_db
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A app.celery_app worker --loglevel=info
+    networks:
+      - voiceai_network
+
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voiceai_flower
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery_worker
+    command: celery -A app.celery_app flower --port=5555
+    networks:
+      - voiceai_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  voiceai_network:
+    driver: bridge
