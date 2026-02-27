@@ -665,7 +665,7 @@ header {
    CONFIG — point to your FastAPI backend
 ══════════════════════════════════════════════════════ */
 const API_BASE = 'http://localhost:8000';
-  
+
 /* ══════════════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════════════ */
@@ -748,7 +748,7 @@ async function callChat(message) {
 async function callVoice(blob) {
   const t0 = Date.now();
   const fd = new FormData();
-  fd.append('audio', blob, 'recording.wav');
+  fd.append('audio', blob, 'recording.webm');
   fd.append('language', S.lang);
   if (S.sessionId) fd.append('session_id', S.sessionId);
   const res = await fetch(`${API_BASE}/api/voice`, { method: 'POST', body: fd });
@@ -803,78 +803,109 @@ function toggleListen() {
 }
 
 async function startListening() {
-  // Try real audio recording → /api/voice
-  if (navigator.mediaDevices && window.MediaRecorder) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      S.audioChunks = [];
-      S.mediaRecorder = new MediaRecorder(stream);
-      S.mediaRecorder.ondataavailable = e => S.audioChunks.push(e.data);
-      S.mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(S.audioChunks, { type: 'audio/wav' });
-        await processVoiceBlob(blob);
+
+  // 1️⃣ Open WebSocket
+  S.socket = new WebSocket("ws://localhost:8000/ws/voice");
+
+  S.socket.onopen = async () => {
+
+    console.log("✅ Socket connected");
+
+    // 2️⃣ Ask microphone permission
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    // 3️⃣ Create MediaRecorder
+    S.mediaRecorder = new MediaRecorder(stream, {
+      mimeType: "audio/webm"
+    });
+
+    // 4️⃣ When audio chunk is ready
+    S.mediaRecorder.ondataavailable = (event) => {
+
+      if (!event.data || event.data.size === 0) return;
+
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+
+        const base64Audio = reader.result.split(",")[1];
+
+        if (S.socket.readyState === WebSocket.OPEN) {
+
+          S.socket.send(JSON.stringify({
+            type: "audio",
+            audio: base64Audio,
+            language: S.lang || "en"
+          }));
+
+          console.log("🎤 Audio chunk sent");
+        }
       };
-      S.mediaRecorder.start();
-      S.isListening = true;
-      setOrbState('listening');
-      showToast('🎤 Casting ear charm… tap again to send');
-      return;
-    } catch {}
-  }
-  // Fallback: Web Speech → text → /api/chat
-  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    S.recognition = new SR();
-    const lmap = { en:'en-IN', hi:'hi-IN', ta:'ta-IN', te:'te-IN', bn:'bn-IN', mr:'mr-IN' };
-    S.recognition.lang = lmap[S.lang] || 'en-IN';
-    S.recognition.continuous = false; S.recognition.interimResults = true;
-    S.recognition.onresult = e => {
-      document.getElementById('spellInput').value = Array.from(e.results).map(r=>r[0].transcript).join('');
+
+      reader.readAsDataURL(event.data);
     };
-    S.recognition.onend = () => {
-      const v = document.getElementById('spellInput').value.trim();
-      stopListening();
-      if (v) sendSpell();
-    };
-    S.recognition.start();
+
+    // 5️⃣ Start sending chunks every 1.2 sec
+    S.mediaRecorder.start(1200);
+
     S.isListening = true;
-    setOrbState('listening');
-    showToast('🎤 Speak your spell…');
-  } else {
-    showToast('No voice magic available in this browser');
-  }
+    setOrbState("listening");
+  };
+
+  // 6️⃣ Handle responses from backend
+  S.socket.onmessage = (event) => {
+
+    const data = JSON.parse(event.data);
+
+    if (data.type === "transcription")
+      appendMessage(data.text, "user");
+
+    if (data.type === "response")
+      appendMessage(data.text, "bot");
+
+    if (data.type === "audio")
+      playBase64Audio(data.audio);
+  };
+
+  S.socket.onclose = () => {
+    console.log("Socket closed");
+  };
 }
+
+
 
 function stopListening() {
-  if (S.mediaRecorder && S.mediaRecorder.state !== 'inactive') S.mediaRecorder.stop();
-  if (S.recognition) { try { S.recognition.stop(); } catch {} }
+
+  if (S.mediaRecorder && S.mediaRecorder.state !== "inactive")
+    S.mediaRecorder.stop();
+
+  if (S.socket && S.socket.readyState === WebSocket.OPEN)
+    S.socket.close();
+
   S.isListening = false;
-  setOrbState('idle');
+  setOrbState("idle");
 }
 
+
 async function processVoiceBlob(blob) {
-  setOrbState('loading');
-  const tid = showTyping();
-  try {
-    const data = await callVoice(blob);
-    removeTyping(tid);
-    if (data.transcript) appendMessage(data.transcript, 'user');
-    appendMessage(data.response_text, 'bot');
-    if (data.audio_base64) playBase64Audio(data.audio_base64);
-    else speakText(data.response_text);
-    if (data.sentiment)   updateAura(data.sentiment);
-    if (data.intent)      updateIntent(data.intent);
-    if (data.should_escalate) document.getElementById('darkMark').classList.add('show');
-    bumpTurns();
-    setOrbState('idle');
-    hideErr();
-  } catch(e) {
-    removeTyping(tid);
-    appendMessage('⚠️ Voice spell interrupted. Try typing instead.', 'bot');
-    showErr(e.message);
-    setOrbState('idle');
+  if (!S.socket || S.socket.readyState !== WebSocket.OPEN) {
+    showErr("Socket not connected");
+    return;
   }
+
+  const reader = new FileReader();
+
+  reader.onloadend = () => {
+    const base64Audio = reader.result.split(",")[1];
+
+    S.socket.send(JSON.stringify({
+      type: "audio",
+      audio: base64Audio,
+      language: S.lang || "en"
+    }));
+  };
+
+  reader.readAsDataURL(blob);
 }
 
 /* ══════════════════════════════════════════════════════
