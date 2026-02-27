@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hogwarts Voice Spellbook — Great Hall</title>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;900&family=UnifrakturMaguntia&display=swap" rel="stylesheet"/>
+  <style>
+    /* ══════════════════════════════════════════
+       DESIGN TOKENS
+    ══════════════════════════════════════════ */
+    :root {
+      --gold:       #c9a84c;
+      --gold-lt:    #f0d060;
+      --gold-glow:  #ffe680;
+      --gold-dim:   rgba(201,168,76,0.18);
+      --dark:       #080604;
+      --dark-mid:   #100a06;
+      --dark-card:  rgba(20,12,5,0.97);
+      --parchment:  #f2e0b8;
+      --parch-dk:   #c8a878;
+      --parch-bg:   rgba(242,224,184,0.06);
+      --maroon:     #4a1212;
+      --maroon-lt:  #6b1e1e;
+      --maroon-glow:rgba(106,30,30,0.45);
+      --emerald:    #162e1f;
+      --emerald-lt: #1e4230;
+      --sapphire:   #14224a;
+      --sapphire-lt:#1c3066;
+      --border:     rgba(201,168,76,0.22);
+      --border-act: rgba(201,168,76,0.60);
+      --stone:      rgba(30,22,14,0.96);
+      --shadow-gold:0 0 30px rgba(201,168,76,0.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--dark);
+      font-family: 'IM Fell English', Georgia, serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--parchment);
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M8 2 L8 22 L16 14 L20 18 L22 16 L18 12 L22 8 Z' fill='%23c9a84c' stroke='%235c1a1a' stroke-width='1'/%3E%3C/svg%3E") 4 2, auto;
+    }
+
+    /* ══════════════════════════════════════════
+       ATMOSPHERIC LAYERS
+    ══════════════════════════════════════════ */
+
+    /* Sky & Castle silhouette */
+    .bg-castle {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      overflow: hidden;
+    }
+    .bg-castle::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 35%, rgba(92,26,26,0.28) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 20%, rgba(26,43,92,0.22) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 85%, rgba(26,61,43,0.20) 0%, transparent 45%),
+        radial-gradient(ellipse at 50% 0%, rgba(30,18,8,0.60) 0%, transparent 40%),
+        linear-gradient(180deg, #060408 0%, #0a0706 40%, #080603 100%);
+    }
+    /* Stars */
+    .bg-castle::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(201,168,76,0.95) 1px, transparent 1px),
+        radial-gradient(circle, rgba(240,208,96,0.65) 1px, transparent 1px),
+        radial-gradient(circle, rgba(201,168,76,0.55) 1.5px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,240,200,0.40) 0.8px, transparent 0.8px);
+      background-size: 260px 260px, 160px 160px, 360px 360px, 120px 120px;
+      background-position: 0 0, 80px 60px, 190px 35px, 40px 90px;
+      opacity: 0.30;
+      animation: starTwinkle 8s ease-in-out infinite alternate;
+    }
+    @keyframes starTwinkle {
+      0%   { opacity: 0.25; }
+      50%  { opacity: 0.38; }
+      100% { opacity: 0.22; }
+    }
+
+    /* Castle SVG silhouette */
+    .castle-svg {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100vw; max-width: 1400px; height: auto;
+      z-index: 0; pointer-events: none;
+      opacity: 0.12;
+      filter: blur(1px);
+    }
+
+    /* Mist layer */
+    .mist {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 35vh;
+      z-index: 1; pointer-events: none;
+      background: linear-gradient(0deg,
+        rgba(8,6,4,0.85) 0%,
+        rgba(12,9,6,0.45) 40%,
+        transparent 100%);
+    }
+    .mist::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 25% 100%, rgba(26,43,92,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 75% 100%, rgba(26,61,43,0.12) 0%, transparent 50%);
+      animation: mistDrift 20s ease-in-out infinite alternate;
+    }
+    @keyframes mistDrift {
+      0%   { transform: translateX(-3%); opacity: 0.8; }
+      100% { transform: translateX(3%);  opacity: 1.0; }
+    }
+
+    /* Noise texture */
+    .noise {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.4;
+    }
+
+    /* ══════════════════════════════════════════
+       PARTICLES
+    ══════════════════════════════════════════ */
+    #particles { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+    .pt {
+      position: absolute; border-radius: 50%;
+      background: var(--gold-lt); opacity: 0;
+      animation: ptFloat linear infinite;
+    }
+    .pt.emerald { background: #52d494; }
+    .pt.sapphire { background: #8ab4f8; }
+    .pt.maroon { background: #e87070; }
+    @keyframes ptFloat {
+      0%   { transform: translateY(102vh) translateX(0px) rotate(0deg);  opacity: 0; }
+      5%   { opacity: .70; }
+      90%  { opacity: .45; }
+      100% { transform: translateY(-30px) translateX(35px) rotate(360deg); opacity: 0; }
+    }
+
+    /* Flash overlay */
+    #flash {
+      position: fixed; inset: 0; z-index: 999; pointer-events: none;
+      background: radial-gradient(ellipse at 50% 50%, rgba(240,208,96,.16) 0%, transparent 65%);
+      opacity: 0; transition: opacity .15s;
+    }
+    #flash.on { opacity: 1; }
+
+    /* ══════════════════════════════════════════
+       LAYOUT WRAPPER
+    ══════════════════════════════════════════ */
+    .wrap {
+      position: relative; z-index: 3;
+      max-width: 1020px; margin: 0 auto; padding: 50px 24px 90px;
+    }
+
+    /* ══════════════════════════════════════════
+       HEADER — THE GREAT HALL BANNER
+    ══════════════════════════════════════════ */
+    .hdr {
+      text-align: center; margin-bottom: 52px; position: relative;
+    }
+    .hdr::before {
+      content: '';
+      position: absolute; left: 50%; transform: translateX(-50%);
+      top: -24px; width: 280px; height: 2px;
+      background: linear-gradient(to right, transparent, var(--gold), transparent);
+      opacity: 0.4;
+    }
+
+    .crest {
+      font-size: 72px; display: block;
+      animation: crestGlow 3.5s ease-in-out infinite;
+      filter: drop-shadow(0 0 12px rgba(201,168,76,0.5));
+    }
+    @keyframes crestGlow {
+      0%,100% { filter: drop-shadow(0 0 8px rgba(201,168,76,.35)) drop-shadow(0 0 20px rgba(92,26,26,0.2)); }
+      50%     { filter: drop-shadow(0 0 28px rgba(240,208,96,1)) drop-shadow(0 0 60px rgba(201,168,76,.55)) drop-shadow(0 0 100px rgba(92,26,26,0.3)); }
+    }
+
+    .hdr h1 {
+      font-family: 'Cinzel Decorative', cursive;
+      font-size: clamp(1.6rem, 4.5vw, 3.2rem);
+      color: var(--gold);
+      text-shadow: 0 0 40px rgba(201,168,76,.6), 0 0 80px rgba(201,168,76,.25), 0 2px 6px rgba(0,0,0,.9);
+      letter-spacing: 3px; line-height: 1.2; margin-top: 10px;
+    }
+    .hdr .subtitle {
+      font-family: 'Cinzel', serif; font-size: .72rem;
+      letter-spacing: 6px; text-transform: uppercase;
+      color: var(--parch-dk); opacity: .45; margin-top: 10px;
+    }
+    .hdr .house-motto {
+      font-family: 'IM Fell English', serif; font-style: italic;
+      font-size: .85rem; color: rgba(201,168,76,0.35);
+      margin-top: 6px; letter-spacing: 1px;
+    }
+
+    .divider {
+      display: flex; align-items: center; gap: 14px;
+      margin: 22px auto; width: 70%; max-width: 480px;
+    }
+    .divider-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--gold), transparent); opacity: 0.35; }
+    .divider span { color: var(--gold); font-size: 14px; opacity: 0.7; }
+
+    /* House crests bar */
+    .house-bar {
+      display: flex; justify-content: center; gap: 24px; margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .house-badge {
+      font-family: 'Cinzel', serif; font-size: .58rem; letter-spacing: 2px;
+      text-transform: uppercase; padding: 5px 14px;
+      border: 1px solid var(--border); border-radius: 2px;
+      transition: all .3s; opacity: 0.5;
+    }
+    .house-badge:hover { opacity: 1; }
+    .hb-gryffindor { color: #e8a050; border-color: rgba(232,160,80,0.3); }
+    .hb-gryffindor:hover { background: rgba(139,0,0,0.15); border-color: rgba(232,160,80,0.7); box-shadow: 0 0 14px rgba(232,160,80,0.2); }
+    .hb-slytherin  { color: #52d494; border-color: rgba(82,212,148,0.25); }
+    .hb-slytherin:hover  { background: rgba(26,61,43,0.2); border-color: rgba(82,212,148,0.6); box-shadow: 0 0 14px rgba(82,212,148,0.18); }
+    .hb-ravenclaw  { color: #8ab4f8; border-color: rgba(138,180,248,0.25); }
+    .hb-ravenclaw:hover  { background: rgba(26,43,92,0.2); border-color: rgba(138,180,248,0.6); box-shadow: 0 0 14px rgba(138,180,248,0.18); }
+    .hb-hufflepuff { color: #f0d060; border-color: rgba(240,208,96,0.25); }
+    .hb-hufflepuff:hover { background: rgba(50,40,0,0.2); border-color: rgba(240,208,96,0.6); box-shadow: 0 0 14px rgba(240,208,96,0.18); }
+
+    /* ══════════════════════════════════════════
+       SERVER / MAGIC STATUS BAR
+    ══════════════════════════════════════════ */
+    .srv-bar {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+      background: rgba(8,5,2,0.94);
+      border: 1px solid var(--border);
+      border-top: 2px solid rgba(201,168,76,0.35);
+      border-radius: 2px; padding: 12px 18px; margin-bottom: 32px;
+      position: relative; overflow: hidden;
+    }
+    .srv-bar::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(to right, transparent, var(--gold), transparent);
+      opacity: 0.5;
+    }
+    /* Stone texture on srv bar */
+    .srv-bar::after {
+      content: '';
+      position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 28px,
+        rgba(201,168,76,0.02) 28px,
+        rgba(201,168,76,0.02) 29px
+      );
+    }
+    .srv-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #333; transition: background .4s, box-shadow .4s; flex-shrink: 0;
+    }
+    .srv-dot.on  { background: #52d494; box-shadow: 0 0 12px #52d494, 0 0 24px rgba(82,212,148,0.4); }
+    .srv-dot.off { background: #d45252; box-shadow: 0 0 10px rgba(212,82,82,0.6); }
+    .srv-txt {
+      font-family: 'Cinzel', serif; font-size: .68rem;
+      letter-spacing: 2px; color: var(--parch-dk); opacity: .7; flex: 1; min-width: 120px;
+    }
+    .eng-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .eng-badge {
+      font-family: 'Cinzel', serif; font-size: .58rem; letter-spacing: 1.5px;
+      padding: 3px 10px; border: 1px solid var(--border); border-radius: 2px;
+      color: var(--gold); opacity: .62; background: rgba(201,168,76,0.04);
+    }
+    .srv-url {
+      background: rgba(201,168,76,.04); border: 1px solid var(--border);
+      color: var(--parchment); font-family: 'Cinzel', serif; font-size: .65rem;
+      padding: 6px 12px; border-radius: 2px; outline: none; width: 180px; letter-spacing: 1px;
+    }
+    .srv-url:focus { border-color: var(--border-act); box-shadow: 0 0 10px rgba(201,168,76,0.1); }
+
+    /* ══════════════════════════════════════════
+       STONE-WALL TABS (Hogwarts Sidebar style as horizontal)
+    ══════════════════════════════════════════ */
+    .tabs {
+      display: flex; margin-bottom: 32px; gap: 0;
+      overflow-x: auto; position: relative;
+      background: rgba(16,10,5,0.92);
+      border: 1px solid var(--border);
+      border-radius: 3px; padding: 4px;
+      /* Stone wall texture */
+      background-image: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 1px,
+        rgba(201,168,76,0.02) 1px,
+        rgba(201,168,76,0.02) 2px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 20px,
+        rgba(201,168,76,0.02) 20px,
+        rgba(201,168,76,0.02) 21px
+      );
+    }
+    .tabs::-webkit-scrollbar { height: 3px; }
+    .tabs::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 2px; }
+
+    .tab {
+      font-family: 'Cinzel', serif; font-size: .68rem; letter-spacing: 2px;
+      text-transform: uppercase; padding: 11px 20px;
+      color: rgba(201,168,76,.35); cursor: pointer;
+      background: none; border: none; border-radius: 2px;
+      transition: color .25s, background .25s, box-shadow .25s; white-space: nowrap;
+      position: relative;
+    }
+    .tab::after {
+      content: '';
+      position: absolute; bottom: 3px; left: 20%; right: 20%; height: 1px;
+      background: var(--gold); opacity: 0; border-radius: 1px;
+      transition: opacity .25s, left .25s, right .25s;
+    }
+    .tab:hover {
+      color: var(--gold-lt);
+      background: rgba(201,168,76,0.07);
+      box-shadow: 0 0 18px rgba(201,168,76,0.12) inset;
+    }
+    .tab:hover::after { opacity: 0.5; left: 10%; right: 10%; }
+    .tab.on {
+      color: var(--gold-lt);
+      background: rgba(201,168,76,0.10);
+      box-shadow: 0 0 20px rgba(201,168,76,0.15) inset;
+    }
+    .tab.on::after { opacity: 1; left: 15%; right: 15%; }
+
+    .pane { display: none; }
+    .pane.on { display: block; }
+
+    /* ══════════════════════════════════════════
+       CARDS — PARCHMENT PANELS
+    ══════════════════════════════════════════ */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: linear-gradient(145deg,
+        rgba(22,14,6,0.98) 0%,
+        rgba(18,11,5,0.96) 50%,
+        rgba(24,15,7,0.98) 100%);
+      border: 1px solid var(--border);
+      border-radius: 3px; padding: 28px 24px; position: relative; overflow: hidden;
+      transition: border-color .35s, box-shadow .35s;
+    }
+    /* Parchment corner ornament */
+    .card::before {
+      content: '';
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        linear-gradient(135deg, rgba(201,168,76,.05) 0%, transparent 45%),
+        linear-gradient(315deg, rgba(201,168,76,.03) 0%, transparent 40%);
+    }
+    .card::after {
+      content: '✦';
+      position: absolute; top: 11px; right: 13px;
+      color: rgba(201,168,76,.20); font-size: 12px;
+      text-shadow: 0 0 8px rgba(201,168,76,0.3);
+    }
+    /* Bottom-left ornament */
+    .card .card-ornament-bl {
+      position: absolute; bottom: 10px; left: 12px;
+      color: rgba(201,168,76,.10); font-size: 11px; font-family: 'Cinzel Decorative';
+    }
+    /* Border glow on hover */
+    .card:hover {
+      border-color: rgba(201,168,76,0.50);
+      box-shadow: 0 0 35px rgba(201,168,76,.12), 0 8px 30px rgba(0,0,0,0.5);
+    }
+    /* Top golden rule */
+    .card-top-rule {
+      position: absolute; top: 0; left: 16px; right: 16px; height: 1px;
+      background: linear-gradient(to right, transparent, rgba(201,168,76,0.4), transparent);
+    }
+    .card.full { grid-column: 1 / -1; }
+
+    /* Card heading */
+    .c-icon  { font-size: 38px; display: block; margin-bottom: 12px; animation: iconPulse 2.8s ease-in-out infinite; }
+    @keyframes iconPulse { 0%,100%{transform:scale(1) rotate(0deg)} 50%{transform:scale(1.06) rotate(2deg)} }
+    .c-spell {
+      font-family: 'Cinzel Decorative', cursive; font-size: .68rem;
+      color: var(--gold); letter-spacing: 2.5px; opacity: .80; margin-bottom: 4px;
+      text-shadow: 0 0 12px rgba(201,168,76,0.3);
+    }
+    .c-title {
+      font-family: 'Cinzel', serif; font-size: 1.0rem;
+      color: var(--parchment); margin-bottom: 16px;
+      border-bottom: 1px solid rgba(201,168,76,0.12); padding-bottom: 12px;
+    }
+
+    /* ══════════════════════════════════════════
+       BUTTONS — MAGICAL WAND BUTTONS
+    ══════════════════════════════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: 'Cinzel', serif; font-size: .72rem; letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 11px 18px; width: 100%; margin-bottom: 9px; cursor: pointer; border-radius: 2px;
+      transition: all .25s; border: 1px solid var(--border-act); color: var(--gold-lt);
+      background: linear-gradient(135deg, var(--maroon) 0%, var(--maroon-lt) 100%);
+      position: relative; overflow: hidden;
+    }
+    .btn::before {
+      content: '';
+      position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+      transition: left .4s;
+    }
+    .btn:hover::before { left: 100%; }
+    .btn:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 20px rgba(201,168,76,.25), 0 4px 15px rgba(0,0,0,0.4);
+      transform: translateY(-2px);
+    }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: .32; cursor: not-allowed; transform: none; }
+    .btn.pulse {
+      border-color: var(--gold);
+      animation: btnPulse 1.1s ease-in-out infinite;
+    }
+    @keyframes btnPulse {
+      0%,100% { box-shadow: 0 0 14px rgba(201,168,76,.30); }
+      50%     { box-shadow: 0 0 32px rgba(240,208,96,.70), 0 0 60px rgba(201,168,76,.25); }
+    }
+    .btn.green  {
+      background: linear-gradient(135deg, var(--emerald) 0%, var(--emerald-lt) 100%);
+      border-color: rgba(82,212,148,0.35);
+    }
+    .btn.green:hover  { border-color: rgba(82,212,148,0.7); box-shadow: 0 0 20px rgba(82,212,148,.18); }
+    .btn.blue   {
+      background: linear-gradient(135deg, var(--sapphire) 0%, var(--sapphire-lt) 100%);
+      border-color: rgba(138,180,248,0.3);
+    }
+    .btn.blue:hover   { border-color: rgba(138,180,248,0.6); box-shadow: 0 0 20px rgba(138,180,248,.18); }
+    .btn.sm { width: auto; padding: 7px 14px; font-size: .62rem; margin-bottom: 0; }
+
+    /* ══════════════════════════════════════════
+       FORM FIELDS
+    ══════════════════════════════════════════ */
+    .lbl {
+      font-family: 'Cinzel', serif; font-size: .60rem; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--gold); opacity: .60;
+      display: block; margin: 12px 0 5px;
+    }
+
+    /* Parchment-style scrolls (textareas/divs) */
+    .scroll {
+      background: linear-gradient(135deg,
+        rgba(242,224,184,0.06) 0%,
+        rgba(242,224,184,0.04) 50%,
+        rgba(242,224,184,0.07) 100%);
+      border: 1px solid rgba(201,168,76,.16);
+      border-radius: 2px; padding: 13px 15px; color: var(--parchment);
+      font-family: 'IM Fell English', serif; font-style: italic;
+      font-size: .90rem; line-height: 1.78; width: 100%;
+      min-height: 80px; max-height: 170px; overflow-y: auto;
+      resize: none; outline: none; margin-bottom: 10px;
+      box-shadow: inset 0 1px 8px rgba(0,0,0,0.3);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .scroll:empty::before { content: attr(data-ph); opacity: .25; font-style: italic; }
+    .scroll:focus {
+      border-color: rgba(201,168,76,.40);
+      box-shadow: inset 0 1px 8px rgba(0,0,0,0.3), 0 0 14px rgba(201,168,76,0.08);
+    }
+    .scroll::-webkit-scrollbar { width: 4px; }
+    .scroll::-webkit-scrollbar-thumb { background: rgba(201,168,76,.28); border-radius: 2px; }
+    textarea.scroll { display: block; }
+
+    .sel {
+      width: 100%; background: rgba(12,8,3,0.96);
+      border: 1px solid rgba(201,168,76,.20);
+      color: var(--parchment); font-family: 'Cinzel', serif; font-size: .70rem;
+      padding: 8px 11px; border-radius: 2px; outline: none; cursor: pointer;
+      letter-spacing: .5px; margin-bottom: 9px;
+      transition: border-color .2s;
+    }
+    .sel option { background: #100806; }
+    .sel:focus { border-color: var(--border-act); }
+
+    .inp {
+      width: 100%; background: rgba(12,8,3,0.96);
+      border: 1px solid rgba(201,168,76,.18);
+      color: var(--parchment); font-family: 'Cinzel', serif; font-size: .70rem;
+      padding: 9px 13px; border-radius: 2px; outline: none; letter-spacing: 1px;
+      margin-bottom: 9px; transition: border-color .2s;
+    }
+    .inp::placeholder { color: rgba(201,168,76,.28); font-style: italic; }
+    .inp:focus { border-color: var(--border-act); box-shadow: 0 0 10px rgba(201,168,76,0.08); }
+
+    /* ══════════════════════════════════════════
+       SLIDERS
+    ══════════════════════════════════════════ */
+    .sld-row { margin-bottom: 11px; }
+    .sld-lbl {
+      font-family: 'Cinzel', serif; font-size: .59rem; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold); opacity: .60;
+      display: flex; justify-content: space-between; margin-bottom: 6px;
+    }
+    input[type=range] {
+      width: 100%; -webkit-appearance: none; appearance: none;
+      height: 3px; outline: none; border-radius: 2px;
+      background: linear-gradient(to right, rgba(201,168,76,0.7), rgba(201,168,76,0.15));
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
+      background: radial-gradient(circle, var(--gold-lt), var(--gold));
+      cursor: pointer;
+      box-shadow: 0 0 9px rgba(201,168,76,.70), 0 0 20px rgba(201,168,76,.35);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 15px; height: 15px; border-radius: 50%; border: none;
+      background: var(--gold); cursor: pointer;
+    }
+
+    /* ══════════════════════════════════════════
+       STATUS INDICATORS
+    ══════════════════════════════════════════ */
+    .sts {
+      font-family: 'Cinzel', serif; font-size: .64rem; letter-spacing: 2px;
+      text-transform: uppercase; padding: 5px 0; min-height: 24px;
+      text-align: center; transition: color .3s;
+    }
+    .sts.idle     { color: rgba(201,168,76,.30); }
+    .sts.load     { color: #b8d0ee; animation: stsBlink .9s ease-in-out infinite; }
+    .sts.listen   { color: var(--gold-lt); animation: stsBlink .75s ease-in-out infinite; }
+    .sts.speak    { color: #80d4a0; animation: stsBlink 1.2s ease-in-out infinite; }
+    .sts.done     { color: var(--parch-dk); }
+    .sts.error    { color: #e07878; }
+    @keyframes stsBlink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    /* ══════════════════════════════════════════
+       WAND-WAVE VISUALIZER
+    ══════════════════════════════════════════ */
+    .wave {
+      display: none; align-items: center; justify-content: center; gap: 3px;
+      height: 26px; margin: 7px 0;
+    }
+    .wave.on { display: flex; }
+    .wb {
+      width: 3px; border-radius: 2px;
+      background: linear-gradient(to top, var(--gold), var(--gold-lt));
+      animation: wb .85s ease-in-out infinite;
+      box-shadow: 0 0 5px rgba(201,168,76,.5);
+    }
+    .wb:nth-child(1){animation-delay:0s;    height:5px}
+    .wb:nth-child(2){animation-delay:.11s;  height:13px}
+    .wb:nth-child(3){animation-delay:.22s;  height:22px}
+    .wb:nth-child(4){animation-delay:.33s;  height:13px}
+    .wb:nth-child(5){animation-delay:.44s;  height:7px}
+    .wb:nth-child(6){animation-delay:.33s;  height:13px}
+    .wb:nth-child(7){animation-delay:.22s;  height:22px}
+    .wb:nth-child(8){animation-delay:.11s;  height:13px}
+    .wb:nth-child(9){animation-delay:0s;    height:5px}
+    @keyframes wb { 0%,100%{transform:scaleY(.2);opacity:.25} 50%{transform:scaleY(1);opacity:1} }
+
+    /* ══════════════════════════════════════════
+       COPY BUTTON
+    ══════════════════════════════════════════ */
+    .copybtn {
+      float: right; background: none; border: 1px solid rgba(201,168,76,.16);
+      color: rgba(201,168,76,.42); font-family: 'Cinzel', serif; font-size: .56rem;
+      letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px;
+      cursor: pointer; border-radius: 2px; transition: all .2s; margin-top: 3px;
+    }
+    .copybtn:hover { color: var(--gold); border-color: rgba(201,168,76,.5); }
+
+    /* ══════════════════════════════════════════
+       ARCHIVE — STUDENT SCROLL ITEMS
+    ══════════════════════════════════════════ */
+    .archive-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .arch-item {
+      background: linear-gradient(135deg,
+        rgba(16,10,4,0.90) 0%,
+        rgba(20,13,6,0.88) 100%);
+      border: 1px solid var(--border);
+      border-left: 3px solid rgba(201,168,76,0.3);
+      border-radius: 2px; padding: 14px 18px;
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start;
+      transition: border-color .2s, background .2s, transform .2s;
+    }
+    .arch-item:hover {
+      border-color: rgba(201,168,76,0.5);
+      border-left-color: var(--gold);
+      background: linear-gradient(135deg, rgba(26,16,7,0.95) 0%, rgba(28,18,8,0.96) 100%);
+      transform: translateX(3px);
+      box-shadow: -2px 0 14px rgba(201,168,76,0.1);
+    }
+    .ai-title { font-family: 'Cinzel', serif; font-size: .82rem; color: var(--gold); margin-bottom: 4px; }
+    .ai-prev  { font-family: 'IM Fell English', serif; font-style: italic; font-size: .80rem; color: var(--parch-dk); opacity: .7; line-height: 1.4; }
+    .ai-meta  { font-family: 'Cinzel', serif; font-size: .56rem; letter-spacing: 1px; color: rgba(201,168,76,.36); text-align: right; white-space: nowrap; }
+    .ai-acts  { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+    .ai-btn {
+      background: none; border: 1px solid rgba(201,168,76,.18); color: rgba(201,168,76,.45);
+      font-family: 'Cinzel', serif; font-size: .56rem; letter-spacing: 1px; padding: 4px 10px;
+      cursor: pointer; border-radius: 2px; transition: all .2s; text-transform: uppercase;
+    }
+    .ai-btn:hover     { color: var(--gold); border-color: rgba(201,168,76,.5); background: rgba(201,168,76,0.05); }
+    .ai-btn.red:hover { color: #d47070; border-color: rgba(212,112,112,.4); }
+    .tag {
+      display: inline-block; font-family: 'Cinzel', serif; font-size: .54rem;
+      letter-spacing: 1px; padding: 2px 8px;
+      border: 1px solid rgba(201,168,76,.15); border-radius: 10px;
+      color: rgba(201,168,76,.42); margin: 2px 3px 0 0;
+    }
+
+    /* ══════════════════════════════════════════
+       TRANSLATOR
+    ══════════════════════════════════════════ */
+    .trans-result {
+      background: linear-gradient(135deg,
+        rgba(26,61,43,.18) 0%,
+        rgba(20,50,35,.14) 100%);
+      border: 1px solid rgba(80,200,120,.22);
+      border-top: 2px solid rgba(82,212,148,.4);
+      border-radius: 3px; padding: 16px 18px; margin-top: 16px; display: none;
+    }
+    .trans-spell {
+      font-family: 'Cinzel Decorative', cursive; font-size: 1.14rem;
+      color: var(--gold-lt); text-align: center; margin-bottom: 12px;
+      text-shadow: 0 0 20px rgba(240,208,96,.60);
+    }
+    .trans-body   { font-family: 'IM Fell English', serif; font-style: italic; font-size: .95rem; line-height: 1.76; }
+    .trans-house  { font-family: 'Cinzel', serif; font-size: .62rem; letter-spacing: 3px; text-transform: uppercase; text-align: center; margin-top: 12px; opacity: .58; }
+
+    /* ══════════════════════════════════════════
+       AUDIO
+    ══════════════════════════════════════════ */
+    audio {
+      width: 100%; margin: 14px 0; display: none;
+      filter: sepia(.7) hue-rotate(8deg) saturate(.6);
+      border-radius: 2px;
+    }
+
+    /* ══════════════════════════════════════════
+       FOOTER
+    ══════════════════════════════════════════ */
+    .footer {
+      text-align: center; margin-top: 70px;
+      font-family: 'Cinzel', serif; font-size: .58rem; letter-spacing: 4px;
+      text-transform: uppercase; color: rgba(201,168,76,.18);
+      padding-top: 20px;
+      border-top: 1px solid rgba(201,168,76,0.08);
+    }
+
+    /* ══════════════════════════════════════════
+       TOAST NOTIFICATION — PATRONUS CHARM
+    ══════════════════════════════════════════ */
+    #toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(90px);
+      background: rgba(18,10,4,.97);
+      border: 1px solid var(--gold);
+      border-top: 2px solid rgba(201,168,76,0.7);
+      color: var(--gold-lt); font-family: 'Cinzel', serif; font-size: .70rem; letter-spacing: 2px;
+      padding: 11px 28px; border-radius: 2px; z-index: 1000;
+      box-shadow: 0 0 30px rgba(201,168,76,.22), 0 8px 25px rgba(0,0,0,0.7);
+      transition: transform .4s cubic-bezier(.22,1,.36,1), opacity .4s;
+      opacity: 0; pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ══════════════════════════════════════════
+       RECORDING TIMER
+    ══════════════════════════════════════════ */
+    .rec-timer {
+      display: none; font-family: 'Cinzel', serif; font-size: .70rem; letter-spacing: 2px;
+      color: #e07070; text-align: center; margin: 5px 0;
+      animation: stsBlink .95s ease-in-out infinite;
+    }
+    .rec-timer.on { display: block; }
+
+    /* ══════════════════════════════════════════
+       SECTION SEPARATOR
+    ══════════════════════════════════════════ */
+    .rune-sep {
+      text-align: center; color: rgba(201,168,76,0.25);
+      font-size: 11px; letter-spacing: 8px; margin: 16px 0 10px;
+      font-family: 'Cinzel', serif;
+    }
+
+    /* ══════════════════════════════════════════
+       SPELL DESCRIPTION TEXT
+    ══════════════════════════════════════════ */
+    .desc-txt {
+      font-family: 'IM Fell English', serif; font-style: italic;
+      font-size: .83rem; color: var(--parch-dk); opacity: .68;
+      margin-bottom: 16px; line-height: 1.55;
+    }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+    @media (max-width: 480px) {
+      .hdr h1 { letter-spacing: 1px; }
+      .tabs { gap: 0; }
+      .tab { padding: 9px 12px; font-size: .62rem; letter-spacing: 1px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Atmospheric layers -->
+<div class="bg-castle"></div>
+
+<!-- Castle silhouette SVG -->
+<svg class="castle-svg" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax slice">
+  <path fill="#c9a84c" d="
+    M0,400 L0,280
+    L30,280 L30,240 L45,240 L45,200 L50,200 L50,180 L55,180 L55,200 L60,200 L60,240 L75,240 L75,280
+    L90,280 L90,300 L105,300 L105,240 L115,240 L115,200 L120,200 L120,160 L125,160 L125,200 L130,200 L130,240 L140,240 L140,300
+    L155,300 L155,280 L170,280
+    L170,320 L190,320 L190,260 L200,260 L200,220 L210,220 L210,180 L215,180 L215,160 L218,160 L218,140 L222,140 L222,160 L226,160 L226,180 L230,180 L230,220 L240,220 L240,260 L250,260 L250,320 L270,320
+    L270,340 L290,340 L290,280 L305,280 L305,250 L315,250 L315,210 L325,210 L325,180 L330,180 L330,200 L335,200 L335,210 L345,210 L345,250 L355,250 L355,280 L370,280 L370,340 L390,340
+    L390,360 L410,360 L410,300 L430,300 L430,260 L445,260 L445,220 L455,220 L455,200 L460,200 L460,180 L463,180 L463,155 L467,155 L467,180 L470,180 L470,200 L475,200 L475,220 L485,220 L485,260 L500,260 L500,300 L520,300 L520,360
+    L540,360 L540,340 L560,340 L560,300 L575,300 L575,260 L585,260 L585,230 L592,230 L592,210 L596,210 L596,190 L600,190 L600,170 L604,170 L604,190 L608,190 L608,210 L612,210 L612,230 L619,230 L619,260 L629,260 L629,300 L644,300 L644,340 L660,340 L660,360
+    L680,360 L680,320 L695,320 L695,280 L710,280 L710,260 L720,260 L720,230 L730,230 L730,210 L736,210 L736,195 L740,195 L740,180 L742,175 L744,180 L744,195 L748,195 L748,210 L754,210 L754,230 L764,230 L764,260 L774,260 L774,280 L789,280 L789,320 L804,320 L804,360
+    L820,360 L820,340 L840,340 L840,290 L855,290 L855,260 L865,260 L865,240 L872,240 L872,220 L878,220 L878,200 L882,200 L882,185 L885,185 L885,200 L888,200 L888,220 L894,220 L894,240 L900,240 L900,260 L910,260 L910,290 L925,290 L925,340 L945,340 L945,360
+    L960,360 L960,310 L975,310 L975,270 L985,270 L985,240 L992,240 L992,220 L998,220 L998,200 L1003,200 L1003,185 L1007,185 L1007,165 L1010,165 L1010,185 L1013,185 L1013,200 L1018,200 L1018,220 L1024,220 L1024,240 L1030,240 L1030,270 L1040,270 L1040,310 L1055,310 L1055,360
+    L1070,360 L1070,320 L1085,320 L1085,280 L1095,280 L1095,260 L1100,260 L1100,240 L1105,240 L1105,220 L1110,220 L1110,240 L1115,240 L1115,260 L1120,260 L1120,280 L1130,280 L1130,320 L1145,320 L1145,360
+    L1200,360 L1200,400 Z
+  "/>
+</svg>
+
+<div class="mist"></div>
+<div class="noise"></div>
+<div id="flash"></div>
+<div id="particles"></div>
+
+<div class="wrap">
+
+  <!-- ═══════════════════ THE GREAT HALL HEADER ═══════════════════ -->
+  <header class="hdr">
+    <span class="crest">⚡</span>
+    <h1>Hogwarts Voice Spellbook</h1>
+    <p class="subtitle">Auditory Enchantments — Full Stack Edition</p>
+    <p class="house-motto">"Draco Dormiens Nunquam Titillandus"</p>
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span>✦</span>
+      <div class="divider-line"></div>
+    </div>
+    <div class="house-bar">
+      <span class="house-badge hb-gryffindor">⚔ Gryffindor</span>
+      <span class="house-badge hb-slytherin">🐍 Slytherin</span>
+      <span class="house-badge hb-ravenclaw">🦅 Ravenclaw</span>
+      <span class="house-badge hb-hufflepuff">🦡 Hufflepuff</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════ MAGIC STATUS BAR ═══════════════════ -->
+  <div class="srv-bar">
+    <div class="srv-dot" id="sDot"></div>
+    <div class="srv-txt" id="sTxt">Connecting to Hogwarts backend...</div>
+    <div class="eng-badges" id="sEng"></div>
+    <input class="srv-url" id="srvUrl" value="http://localhost:5000" spellcheck="false"/>
+    <button class="btn sm" style="margin:0" onclick="healthCheck()">🔗 Connect</button>
+  </div>
+
+  <!-- ═══════════════════ STONE-WALL TABS ═══════════════════ -->
+  <nav class="tabs">
+    <button class="tab on"  onclick="tab('stt',this)">🎙️ Sonorus</button>
+    <button class="tab"     onclick="tab('tts',this)">📜 Vox Animus</button>
+    <button class="tab"     onclick="tab('arc',this)">📚 Archives</button>
+    <button class="tab"     onclick="tab('trn',this)">🧙 Translate</button>
+    <button class="tab"     onclick="tab('brw',this)">🌐 Browser Magic</button>
+    <button class="tab"     onclick="tab('adm',this)">⚙️ Admin</button>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════
+       PANE 1 — SONORUS (backend STT)
+  ══════════════════════════════════════════════ -->
+  <div class="pane on" id="p-stt">
+    <div class="card">
+      <div class="card-top-rule"></div>
+      <div class="card-ornament-bl">✦</div>
+      <span class="c-icon">🎙️</span>
+      <div class="c-spell">Sonorus — Backend STT</div>
+      <div class="c-title">Speak a Spell — Voice Recording → Transcription via Flask</div>
+
+      <div class="wave" id="sttWave"><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div></div>
+      <div class="rec-timer" id="recTimer">⏺ 0:00</div>
+      <div class="sts idle" id="sttSts">Awaiting incantation...</div>
+
+      <label class="lbl">Language of Incantation</label>
+      <select class="sel" id="sttLang">
+        <option value="en-US">English — Hogwarts Standard</option>
+        <option value="en-GB">British English — Received Pronunciation</option>
+        <option value="fr-FR">French — Beauxbatons Dialect</option>
+        <option value="de-DE">German — Durmstrang Tongue</option>
+        <option value="es-ES">Spanish — Southern Enchantment</option>
+        <option value="it-IT">Italian — Ancient Tongue</option>
+        <option value="hi-IN">Hindi — Sanskrit Origin</option>
+        <option value="ja-JP">Japanese — Eastern Magic</option>
+        <option value="zh-CN">Mandarin — Dragon Tongue</option>
+      </select>
+
+      <label class="lbl">Whisper Model (quality vs. speed)</label>
+      <select class="sel" id="sttModel">
+        <option value="tiny">Tiny — Swift as a Nimbus 2000</option>
+        <option value="base" selected>Base — Balanced enchantment ⚖️</option>
+        <option value="small">Small — Greater accuracy</option>
+        <option value="medium">Medium — High quality 🌟</option>
+        <option value="large">Large — Best quality (slowest)</option>
+      </select>
+
+      <label class="lbl">Transcript Scroll — Student Scroll</label>
+      <div class="scroll" id="backTx" data-ph="Record your voice — words shall appear here, inscribed by enchanted quill..."></div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="copybtn" onclick="doCopy('backTx')">Copy ✦</button>
+      </div>
+
+      <button class="btn" id="recBtn" onclick="toggleRec()">🎤 Speak a Spell — Begin Recording</button>
+      <button class="btn green" onclick="document.getElementById('auUp').click()">📤 Upload Audio Scroll</button>
+      <input type="file" id="auUp" accept="audio/*" style="display:none" onchange="uploadAudio(this)"/>
+      <button class="btn blue" onclick="saveScroll('backTx','transcript')">📜 Seal in Archives</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANE 2 — VOX ANIMUS (backend TTS)
+  ══════════════════════════════════════════════ -->
+  <div class="pane" id="p-tts">
+    <div class="grid">
+
+      <!-- Input card -->
+      <div class="card">
+        <div class="card-top-rule"></div>
+        <div class="card-ornament-bl">✦</div>
+        <span class="c-icon">📜</span>
+        <div class="c-spell">Vox Animus — Backend TTS</div>
+        <div class="c-title">Ancient Spell Reply — Text → Voice via Flask</div>
+
+        <div class="wave" id="ttsWave"><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div></div>
+        <div class="sts idle" id="ttsSts">Scroll awaiting animation...</div>
+
+        <label class="lbl">Incantation Text</label>
+        <textarea class="scroll" id="ttsText" rows="4" data-ph="Write your incantation here...">Welcome, young witch or wizard, to the Hogwarts Voice Spellbook. May your enchantments echo through these hallowed halls.</textarea>
+
+        <label class="lbl">Voice / Language</label>
+        <select class="sel" id="ttsVoice"></select>
+
+        <div class="sld-row">
+          <div class="sld-lbl"><span>Pace of Incantation</span><span id="rateV">1.0×</span></div>
+          <input type="range" id="rateR" min=".5" max="2" step=".1" value="1" oninput="document.getElementById('rateV').textContent=parseFloat(this.value).toFixed(1)+'×'"/>
+        </div>
+        <div class="sld-row">
+          <div class="sld-lbl"><span>Pitch Enchantment</span><span id="pitchV">1.0</span></div>
+          <input type="range" id="pitchR" min=".5" max="2" step=".1" value="1" oninput="document.getElementById('pitchV').textContent=parseFloat(this.value).toFixed(1)"/>
+        </div>
+
+        <button class="btn" id="ttsBtn" onclick="backendSpeak()">🔮 Cast Vox Animus</button>
+        <button class="btn green" onclick="stopBackendAudio()">🛑 Quietus</button>
+      </div>
+
+      <!-- Playback card -->
+      <div class="card">
+        <div class="card-top-rule"></div>
+        <div class="card-ornament-bl">✦</div>
+        <span class="c-icon">🎧</span>
+        <div class="c-spell">Audio Playback</div>
+        <div class="c-title">Generated Voice Scroll</div>
+        <div class="sts idle" id="auSts">No audio conjured yet...</div>
+        <audio id="auPlayer" controls></audio>
+        <div id="auInfo" style="display:none">
+          <label class="lbl">Audio Details</label>
+          <div class="scroll" id="auDetail" style="font-style:normal;font-size:.78rem;min-height:50px"></div>
+        </div>
+        <button class="btn green" id="dlBtn" onclick="downloadAudio()" style="display:none">⬇️ Download Audio Scroll</button>
+        <button class="btn blue" onclick="saveAudioTranscript()">📜 Save Text to Archives</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANE 3 — ARCHIVES
+  ══════════════════════════════════════════════ -->
+  <div class="pane" id="p-arc">
+    <div class="card full">
+      <div class="card-top-rule"></div>
+      <div class="card-ornament-bl">✦</div>
+      <span class="c-icon">📚</span>
+      <div class="c-spell">Accio Scrolls</div>
+      <div class="c-title">Ministry Reports — Hogwarts Archives</div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <input class="inp" id="arcSearch" placeholder="🔍 Search the archives..." style="flex:1;min-width:160px" oninput="filterArch()"/>
+        <select class="sel" id="arcFilter" style="width:auto;min-width:130px;margin-bottom:0" onchange="filterArch()">
+          <option value="">All Types</option>
+          <option value="transcript">Transcript</option>
+          <option value="tts">TTS Text</option>
+          <option value="spell">Spell Notes</option>
+          <option value="custom">Custom</option>
+        </select>
+        <button class="btn sm" onclick="loadArchive()">🔄 Refresh</button>
+        <button class="btn sm blue" onclick="showNewScroll()">+ New Scroll</button>
+      </div>
+
+      <div class="sts idle" id="arcSts">Summoning scrolls...</div>
+      <div class="archive-list" id="archList"></div>
+
+      <!-- New Scroll form -->
+      <div id="newScrollForm" style="display:none;margin-top:22px;border-top:1px solid var(--border);padding-top:20px">
+        <div class="c-spell" style="margin-bottom:10px">✦ Inscribe New Scroll ✦</div>
+        <label class="lbl">Title</label>
+        <input class="inp" id="nsTitle" placeholder="Scroll title..."/>
+        <label class="lbl">Content</label>
+        <textarea class="scroll" id="nsContent" rows="5" style="max-height:220px" placeholder="Write your content here..."></textarea>
+        <label class="lbl">Type</label>
+        <select class="sel" id="nsType">
+          <option value="custom">Custom Scroll</option>
+          <option value="transcript">Voice Transcript</option>
+          <option value="tts">TTS Content</option>
+          <option value="spell">Spell Notes</option>
+        </select>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button class="btn" style="flex:1;margin-bottom:0" onclick="createScroll()">📜 Seal Scroll</button>
+          <button class="btn green" style="flex:1;margin-bottom:0" onclick="document.getElementById('newScrollForm').style.display='none'">✕ Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANE 4 — TRANSLATOR
+  ══════════════════════════════════════════════ -->
+  <div class="pane" id="p-trn">
+    <div class="card full">
+      <div class="card-top-rule"></div>
+      <div class="card-ornament-bl">✦</div>
+      <span class="c-icon">🧙</span>
+      <div class="c-spell">Lingua Magicae</div>
+      <div class="c-title">Spell Architecture — Hogwarts Latin Translator</div>
+
+      <textarea class="scroll" id="trnIn" rows="4" style="max-height:200px" placeholder="Write text to translate into ancient magical tongue...">Hello friend, I need help with this magic spell for the school.</textarea>
+      <button class="btn" onclick="doTranslate()">⚗️ Cast Lingua Magicae</button>
+
+      <div class="trans-result" id="trnResult">
+        <div class="trans-spell" id="trnSpell"></div>
+        <label class="lbl" style="text-align:center;display:block">Original Tongue</label>
+        <div class="trans-body" id="trnOrig" style="opacity:.55;margin-bottom:14px"></div>
+        <label class="lbl" style="text-align:center;display:block">Ancient Magical Tongue</label>
+        <div class="trans-body" id="trnTrans"></div>
+        <div class="trans-house" id="trnHouse"></div>
+        <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
+          <button class="btn green" style="flex:1;margin-bottom:0" onclick="copyTrans()">📋 Copy Translation</button>
+          <button class="btn blue"  style="flex:1;margin-bottom:0" onclick="speakTrans()">🔊 Speak Translation</button>
+          <button class="btn"       style="flex:1;margin-bottom:0" onclick="saveTrans()">📜 Save to Archives</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANE 5 — BROWSER MAGIC (Web Speech API)
+  ══════════════════════════════════════════════ -->
+  <div class="pane" id="p-brw">
+    <div class="grid">
+
+      <!-- Browser STT -->
+      <div class="card">
+        <div class="card-top-rule"></div>
+        <div class="card-ornament-bl">✦</div>
+        <span class="c-icon">🎙️</span>
+        <div class="c-spell">Sonorus Browseri</div>
+        <div class="c-title">Browser Speech Recognition</div>
+        <p class="desc-txt">Native Web Speech API — no backend required. Chrome &amp; Edge only.</p>
+        <div class="wave" id="bsttWave"><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div></div>
+        <div class="sts idle" id="bsttSts">Browser ears at rest...</div>
+        <div class="scroll" id="bTx" data-ph="Spoken words appear here instantly..."></div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+          <button class="copybtn" onclick="doCopy('bTx')">Copy ✦</button>
+        </div>
+        <button class="btn" id="bRecBtn" onclick="toggleBSTT()">🪄 Cast Sonorus — Speak a Spell</button>
+        <button class="btn green" onclick="document.getElementById('bTx').innerHTML='';setSts('bsttSts','idle','Scroll cleared')">🧹 Clear Scroll</button>
+        <button class="btn blue" onclick="saveScroll('bTx','transcript')">📜 Save to Archives</button>
+      </div>
+
+      <!-- Browser TTS -->
+      <div class="card">
+        <div class="card-top-rule"></div>
+        <div class="card-ornament-bl">✦</div>
+        <span class="c-icon">🔊</span>
+        <div class="c-spell">Vox Browseri</div>
+        <div class="c-title">Browser Text-to-Speech</div>
+        <p class="desc-txt">Native speechSynthesis API — no backend required.</p>
+        <div class="wave" id="bttsWave"><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div></div>
+        <div class="sts idle" id="bttsSts">Voice at rest...</div>
+        <textarea class="scroll" id="bTTS" rows="3" placeholder="Write words to speak...">Welcome to Hogwarts. May magic guide your path, young wizard.</textarea>
+        <div class="sld-row">
+          <div class="sld-lbl"><span>Speed</span><span id="bRateV">1.0×</span></div>
+          <input type="range" id="bRateR" min=".5" max="2" step=".1" value="1" oninput="document.getElementById('bRateV').textContent=parseFloat(this.value).toFixed(1)+'×'"/>
+        </div>
+        <div class="sld-row">
+          <div class="sld-lbl"><span>Pitch</span><span id="bPitchV">1.0</span></div>
+          <input type="range" id="bPitchR" min=".5" max="2" step=".1" value="1" oninput="document.getElementById('bPitchV').textContent=parseFloat(this.value).toFixed(1)"/>
+        </div>
+        <select class="sel" id="bVoice"></select>
+        <button class="btn" id="bTTSBtn" onclick="browserSpeak()">🔮 Cast Vox Animus</button>
+        <button class="btn green" onclick="window.speechSynthesis.cancel();setSts('bttsSts','idle','Quietus');document.getElementById('bttsWave').classList.remove('on');document.getElementById('bTTSBtn').classList.remove('pulse')">🛑 Quietus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANE 6 — ADMIN
+  ══════════════════════════════════════════════ -->
+  <div class="pane" id="p-adm">
+    <div class="card full">
+      <div class="card-top-rule"></div>
+      <div class="card-ornament-bl">✦</div>
+      <span class="c-icon">⚙️</span>
+      <div class="c-spell">Administratum Hogwartis</div>
+      <div class="c-title">Magic Status — Server Administration Panel</div>
+
+      <div class="sts idle" id="admSts">Awaiting command...</div>
+      <div class="scroll" id="admInfo" style="font-style:normal;font-size:.8rem;line-height:1.8;display:none"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+        <button class="btn" style="flex:1;min-width:140px" onclick="loadStats()">📊 View Statistics</button>
+        <button class="btn green" style="flex:1;min-width:140px" onclick="healthCheck()">🏥 Health Check</button>
+        <button class="btn blue"  style="flex:1;min-width:140px" onclick="loadVoices()">🔊 Reload Voices</button>
+        <button class="btn" style="flex:1;min-width:140px;background:linear-gradient(135deg,rgba(70,15,15,.85),rgba(90,20,20,.9))" onclick="clearCache()">🗑️ Clear Audio Cache</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    ✦ &nbsp; Hogwarts Voice Spellbook &nbsp; ✦ &nbsp; Flask + Web Speech API &nbsp; ✦ &nbsp; Est. 993 A.D. &nbsp; ✦
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════ */
+let API_BASE     = location.origin;
+let mediaRec     = null;
+let audioChunks  = [];
+let recActive    = false;
+let recSecs      = 0;
+let recInterval  = null;
+let bSTTRec      = null;
+let bSTTActive   = false;
+let bVoices      = [];
+let archiveData  = [];
+let lastTrans    = null;
+let audioBlob    = null;
+
+/* ═══════════════════════════════════════════════════
+   PARTICLES
+═══════════════════════════════════════════════════ */
+;(function(){
+  const el = document.getElementById('particles');
+  const colors = ['', '', '', 'emerald', 'sapphire', 'maroon'];
+  for(let i=0;i<32;i++){
+    const p=document.createElement('div');
+    const colorClass = colors[Math.floor(Math.random() * colors.length)];
+    p.className='pt' + (colorClass ? ' ' + colorClass : '');
+    p.style.left = Math.random()*100+'%';
+    p.style.animationDuration=(10+Math.random()*16)+'s';
+    p.style.animationDelay=(Math.random()*22)+'s';
+    const sz=(0.8+Math.random()*2.2)+'px';
+    p.style.width=p.style.height=sz;
+    el.appendChild(p);
+  }
+})();
+
+/* ═══════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════ */
+function apiUrl(path){ return document.getElementById('srvUrl').value.replace(/\/$/,'') + path; }
+
+function flash(){
+  const el=document.getElementById('flash');
+  el.classList.add('on');
+  setTimeout(()=>el.classList.remove('on'),300);
+}
+
+function toast(msg, dur=2800){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+function setSts(id, cls, txt){
+  const el=document.getElementById(id);
+  el.className='sts '+cls; el.textContent=txt;
+}
+
+function doCopy(id){
+  const el=document.getElementById(id);
+  const txt=el.innerText||el.value||'';
+  navigator.clipboard.writeText(txt).then(()=>toast('✦ Copied to enchanted clipboard'));
+}
+
+function tab(name, btn){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('p-'+name).classList.add('on');
+  btn.classList.add('on');
+  if(name==='arc') loadArchive();
+}
+
+/* ═══════════════════════════════════════════════════
+   HEALTH CHECK
+═══════════════════════════════════════════════════ */
+async function healthCheck(){
+  const dot=document.getElementById('sDot'), txt=document.getElementById('sTxt'), eng=document.getElementById('sEng');
+  dot.className='srv-dot'; txt.textContent='Connecting...';
+  try{
+    const r=await fetch(apiUrl('/api/health'),{signal:AbortSignal.timeout(5000)});
+    const j=await r.json();
+    if(j.status==='success'){
+      dot.className='srv-dot on';
+      txt.textContent='🏰 Hogwarts Backend Online';
+      const e=j.data.engines;
+      eng.innerHTML=`<span class="eng-badge">STT: ${e.stt}</span><span class="eng-badge">TTS: ${e.tts}</span><span class="eng-badge">Scrolls: ${j.data.scrolls_count}</span>`;
+      loadVoices();
+    } else throw 0;
+  } catch {
+    dot.className='srv-dot off';
+    txt.textContent='⚠ Backend offline — Browser Magic tab still works';
+    eng.innerHTML='';
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   BACKEND STT — Recording
+═══════════════════════════════════════════════════ */
+async function toggleRec(){
+  if(recActive){ stopRec(); return; }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRec=new MediaRecorder(stream, {mimeType: MediaRecorder.isTypeSupported('audio/webm')? 'audio/webm':'audio/ogg'});
+    audioChunks=[];
+    mediaRec.ondataavailable=e=>{ if(e.data.size>0) audioChunks.push(e.data); };
+    mediaRec.onstop=async()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      clearInterval(recInterval);
+      document.getElementById('recTimer').classList.remove('on');
+      document.getElementById('recBtn').textContent='🎤 Speak a Spell — Begin Recording';
+      document.getElementById('recBtn').classList.remove('pulse');
+      document.getElementById('sttWave').classList.remove('on');
+      recActive=false;
+      const blob=new Blob(audioChunks,{type:'audio/webm'});
+      await sendAudio(blob,'recording.webm');
+    };
+    mediaRec.start(200);
+    recActive=true; recSecs=0;
+    document.getElementById('recBtn').textContent='⏹ Stop Recording';
+    document.getElementById('recBtn').classList.add('pulse');
+    document.getElementById('sttWave').classList.add('on');
+    document.getElementById('recTimer').classList.add('on');
+    setSts('sttSts','listen','🔴 Recording incantation...');
+    flash();
+    recInterval=setInterval(()=>{
+      recSecs++;
+      const m=String(Math.floor(recSecs/60)).padStart(1,'0');
+      const s=String(recSecs%60).padStart(2,'0');
+      document.getElementById('recTimer').textContent=`⏺ ${m}:${s}`;
+    },1000);
+  } catch(e){
+    setSts('sttSts','error','⚠ Microphone access denied');
+  }
+}
+function stopRec(){ if(mediaRec&&recActive) mediaRec.stop(); }
+
+async function uploadAudio(inp){
+  if(!inp.files[0]) return;
+  setSts('sttSts','load','📤 Uploading audio scroll...');
+  await sendAudio(inp.files[0], inp.files[0].name);
+}
+
+async function sendAudio(blob, name){
+  setSts('sttSts','load','🌀 Transcribing via Flask...');
+  try{
+    const fd=new FormData();
+    fd.append('audio',blob,name);
+    fd.append('language',document.getElementById('sttLang').value);
+    fd.append('model',document.getElementById('sttModel').value);
+    const r=await fetch(apiUrl('/api/sonorus/transcribe'),{method:'POST',body:fd});
+    const j=await r.json();
+    if(j.status==='success'){
+      document.getElementById('backTx').textContent=j.data.transcript;
+      setSts('sttSts','done',`✓ ${j.data.word_count} words · ${j.data.duration_ms}ms · ${j.data.engine}`);
+      flash();
+    } else setSts('sttSts','error','⚠ '+j.message);
+  } catch { setSts('sttSts','error','⚠ Backend unreachable — is Flask running?'); }
+}
+
+/* ═══════════════════════════════════════════════════
+   BACKEND TTS
+═══════════════════════════════════════════════════ */
+async function loadVoices(){
+  try{
+    const r=await fetch(apiUrl('/api/vox-animus/voices'));
+    const j=await r.json();
+    if(j.status==='success'){
+      const sel=document.getElementById('ttsVoice');
+      sel.innerHTML=j.data.voices.map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
+    }
+  } catch {}
+}
+
+async function backendSpeak(){
+  const text=document.getElementById('ttsText').value.trim();
+  if(!text){ setSts('ttsSts','error','⚠ Empty scroll — write something first'); return; }
+  setSts('ttsSts','load','🌀 Conjuring voice from the ether...');
+  document.getElementById('ttsWave').classList.add('on');
+  document.getElementById('ttsBtn').classList.add('pulse');
+  flash();
+  try{
+    const r=await fetch(apiUrl('/api/vox-animus/speak'),{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        text, voice:document.getElementById('ttsVoice').value,
+        rate:parseFloat(document.getElementById('rateR').value),
+        pitch:parseFloat(document.getElementById('pitchR').value),
+        format:'base64'
+      })
+    });
+    const j=await r.json();
+    if(j.status==='success'){
+      const d=j.data;
+      const au=document.getElementById('auPlayer');
+      au.src='data:audio/mp3;base64,'+d.audio_base64;
+      au.style.display='block';
+      au.play();
+      audioBlob=b64Blob(d.audio_base64,'audio/mp3');
+      document.getElementById('auInfo').style.display='block';
+      document.getElementById('auDetail').textContent=
+        `Engine: ${d.engine}\nChars: ${d.char_count}\nSize: ${(d.size_bytes/1024).toFixed(1)} KB\nCached: ${d.cached}`;
+      document.getElementById('dlBtn').style.display='block';
+      setSts('ttsSts','speak','🔊 Voice conjured successfully');
+      setSts('auSts','speak','🎵 Playing...');
+      au.onended=()=>{
+        setSts('ttsSts','done','✓ Vox Animus complete');
+        setSts('auSts','done','✓ Playback complete');
+        document.getElementById('ttsWave').classList.remove('on');
+        document.getElementById('ttsBtn').classList.remove('pulse');
+      };
+    } else {
+      setSts('ttsSts','error','⚠ '+j.message);
+      document.getElementById('ttsWave').classList.remove('on');
+      document.getElementById('ttsBtn').classList.remove('pulse');
+    }
+  } catch {
+    setSts('ttsSts','error','⚠ Backend unreachable');
+    document.getElementById('ttsWave').classList.remove('on');
+    document.getElementById('ttsBtn').classList.remove('pulse');
+  }
+}
+
+function stopBackendAudio(){
+  const au=document.getElementById('auPlayer');
+  au.pause(); au.currentTime=0;
+  setSts('ttsSts','idle','🛑 Quietus — silenced');
+  setSts('auSts','idle','Stopped');
+  document.getElementById('ttsWave').classList.remove('on');
+  document.getElementById('ttsBtn').classList.remove('pulse');
+}
+
+function downloadAudio(){
+  if(!audioBlob) return;
+  const url=URL.createObjectURL(audioBlob);
+  const a=document.createElement('a'); a.href=url; a.download='hogwarts_voice.mp3'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function saveAudioTranscript(){
+  saveScroll('ttsText','tts');
+}
+
+function b64Blob(b64,type){
+  const b=atob(b64), a=new Uint8Array(b.length);
+  for(let i=0;i<b.length;i++) a[i]=b.charCodeAt(i);
+  return new Blob([a],{type});
+}
+
+/* ═══════════════════════════════════════════════════
+   ARCHIVE — Save / Load / CRUD
+═══════════════════════════════════════════════════ */
+async function saveScroll(elId, type){
+  const el=document.getElementById(elId);
+  const content=(el.innerText||el.value||'').trim();
+  if(!content){ toast('⚠ Nothing to save — scroll is empty'); return; }
+  const title=prompt('Name this scroll:', `${type==='transcript'?'Voice Transcript':'Text'} — ${new Date().toLocaleDateString()}`);
+  if(!title) return;
+  try{
+    const r=await fetch(apiUrl('/api/spell/save'),{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title, content, type})
+    });
+    const j=await r.json();
+    if(j.status==='success'){ flash(); toast('📜 Scroll sealed in the archives!'); }
+    else toast('⚠ '+j.message);
+  } catch { toast('⚠ Backend offline — could not save'); }
+}
+
+async function loadArchive(){
+  setSts('arcSts','load','📡 Summoning scrolls from archives...');
+  try{
+    const q=document.getElementById('arcSearch').value;
+    const t=document.getElementById('arcFilter').value;
+    let url=apiUrl('/api/spell/scrolls');
+    const params=[];
+    if(q) params.push('q='+encodeURIComponent(q));
+    if(t) params.push('type='+encodeURIComponent(t));
+    if(params.length) url+='?'+params.join('&');
+    const r=await fetch(url);
+    const j=await r.json();
+    if(j.status==='success'){
+      archiveData=j.data.scrolls;
+      renderArchive(archiveData);
+      setSts('arcSts','done',`✓ ${archiveData.length} scrolls in the archives`);
+    } else throw 0;
+  } catch { setSts('arcSts','error','⚠ Backend offline or no scrolls found'); }
+}
+
+function filterArch(){ loadArchive(); }
+
+function renderArchive(list){
+  const el=document.getElementById('archList');
+  if(!list.length){
+    el.innerHTML='<div style="text-align:center;padding:32px;font-family:Cinzel,serif;font-size:.70rem;letter-spacing:2px;color:rgba(201,168,76,.25)">No scrolls found in the archives</div>';
+    return;
+  }
+  el.innerHTML=list.map(s=>`
+    <div class="arch-item" id="ai-${s.id}">
+      <div>
+        <div class="ai-title">${escHtml(s.title)}</div>
+        <div class="ai-prev">${escHtml(s.preview)}</div>
+        <div style="margin-top:5px">${(s.tags||[]).map(t=>`<span class="tag">${escHtml(t)}</span>`).join('')}</div>
+        <div class="ai-acts">
+          <button class="ai-btn" onclick="viewScroll('${s.id}')">📖 View</button>
+          <button class="ai-btn" onclick="copyScroll('${s.id}')">📋 Copy</button>
+          <button class="ai-btn" onclick="speakScroll('${s.id}')">🔊 Speak</button>
+          <button class="ai-btn" onclick="editScroll('${s.id}')">✏️ Edit</button>
+          <button class="ai-btn red" onclick="deleteScroll('${s.id}')">✕ Evanesco</button>
+        </div>
+      </div>
+      <div class="ai-meta">
+        <div>${s.type}</div>
+        <div style="margin-top:3px">${s.word_count}w</div>
+        <div style="margin-top:3px">${new Date(s.created_at).toLocaleDateString()}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+async function viewScroll(id){
+  try{
+    const r=await fetch(apiUrl('/api/spell/scroll/'+id));
+    const j=await r.json();
+    if(j.status==='success'){
+      const s=j.data;
+      alert(`📜 ${s.title}\n${'─'.repeat(40)}\n${s.content}\n${'─'.repeat(40)}\nType: ${s.type} | Words: ${s.word_count}\nCreated: ${new Date(s.created_at).toLocaleString()}`);
+    }
+  } catch {}
+}
+
+async function copyScroll(id){
+  try{
+    const r=await fetch(apiUrl('/api/spell/scroll/'+id));
+    const j=await r.json();
+    if(j.status==='success'){ await navigator.clipboard.writeText(j.data.content); flash(); toast('📋 Scroll content copied!'); }
+  } catch {}
+}
+
+async function speakScroll(id){
+  try{
+    const r=await fetch(apiUrl('/api/spell/scroll/'+id));
+    const j=await r.json();
+    if(j.status==='success'){
+      document.getElementById('ttsText').value=j.data.content;
+      tab('tts', document.querySelector('.tab:nth-child(2)'));
+      setTimeout(backendSpeak,200);
+    }
+  } catch {}
+}
+
+async function editScroll(id){
+  try{
+    const r=await fetch(apiUrl('/api/spell/scroll/'+id));
+    const j=await r.json();
+    if(j.status==='success'){
+      const s=j.data;
+      const newTitle=prompt('New title:', s.title);
+      if(newTitle===null) return;
+      const newContent=prompt('New content (first 500 chars shown):', s.content.slice(0,500));
+      if(newContent===null) return;
+      const pr=await fetch(apiUrl('/api/spell/scroll/'+id),{
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({title:newTitle, content:newContent||(s.content)})
+      });
+      const pj=await pr.json();
+      if(pj.status==='success'){ toast('✏️ Scroll updated!'); loadArchive(); }
+    }
+  } catch {}
+}
+
+async function deleteScroll(id){
+  if(!confirm('Evanesco this scroll permanently?')) return;
+  try{
+    const r=await fetch(apiUrl('/api/spell/scroll/'+id),{method:'DELETE'});
+    const j=await r.json();
+    if(j.status==='success'){ flash(); toast('✦ Scroll vanished — Evanesco!'); loadArchive(); }
+  } catch {}
+}
+
+function showNewScroll(){
+  document.getElementById('newScrollForm').style.display='block';
+  document.getElementById('nsTitle').focus();
+}
+
+async function createScroll(){
+  const title=document.getElementById('nsTitle').value.trim();
+  const content=document.getElementById('nsContent').value.trim();
+  const type=document.getElementById('nsType').value;
+  if(!content){ toast('⚠ The scroll is blank!'); return; }
+  try{
+    const r=await fetch(apiUrl('/api/spell/save'),{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:title||'Untitled Scroll', content, type})
+    });
+    const j=await r.json();
+    if(j.status==='success'){
+      document.getElementById('newScrollForm').style.display='none';
+      document.getElementById('nsTitle').value='';
+      document.getElementById('nsContent').value='';
+      flash(); toast('📜 Scroll sealed!'); loadArchive();
+    }
+  } catch { toast('⚠ Backend offline'); }
+}
+
+/* ═══════════════════════════════════════════════════
+   TRANSLATOR
+═══════════════════════════════════════════════════ */
+const HOUSE_COLORS={ Gryffindor:'#c9a84c', Ravenclaw:'#6898d4', Hufflepuff:'#d4b030', Slytherin:'#52c08a' };
+
+async function doTranslate(){
+  const text=document.getElementById('trnIn').value.trim();
+  if(!text) return;
+  try{
+    const r=await fetch(apiUrl('/api/spell/translate'),{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text})
+    });
+    const j=await r.json();
+    if(j.status==='success'){
+      lastTrans=j.data;
+      document.getElementById('trnSpell').textContent=j.data.spell_name;
+      document.getElementById('trnOrig').textContent=j.data.original;
+      document.getElementById('trnTrans').textContent=j.data.translated;
+      const hEl=document.getElementById('trnHouse');
+      hEl.textContent=`✦ House ${j.data.house} Enchantment ✦`;
+      hEl.style.color=HOUSE_COLORS[j.data.house]||'var(--gold)';
+      document.getElementById('trnResult').style.display='block';
+      flash();
+    }
+  } catch { toast('⚠ Translator unavailable — backend offline?'); }
+}
+
+function copyTrans(){ if(lastTrans){ navigator.clipboard.writeText(lastTrans.translated); toast('📋 Translation copied!'); } }
+
+function speakTrans(){
+  if(!lastTrans) return;
+  document.getElementById('ttsText').value=lastTrans.translated;
+  tab('tts', document.querySelectorAll('.tab')[1]);
+  setTimeout(backendSpeak, 200);
+}
+
+async function saveTrans(){
+  if(!lastTrans) return;
+  const content=`Original: ${lastTrans.original}\n\nTranslated: ${lastTrans.translated}`;
+  try{
+    await fetch(apiUrl('/api/spell/save'),{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:'Translation: '+lastTrans.spell_name, content, type:'spell'})
+    });
+    flash(); toast('📜 Translation saved to archives!');
+  } catch { toast('⚠ Backend offline'); }
+}
+
+/* ═══════════════════════════════════════════════════
+   BROWSER STT
+═══════════════════════════════════════════════════ */
+function toggleBSTT(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ setSts('bsttSts','error','⚠ Not supported — use Chrome or Edge'); return; }
+  if(bSTTActive){
+    bSTTActive=false; bSTTRec&&bSTTRec.stop();
+    document.getElementById('bRecBtn').textContent='🪄 Cast Sonorus — Speak a Spell';
+    document.getElementById('bRecBtn').classList.remove('pulse');
+    document.getElementById('bsttWave').classList.remove('on');
+    setSts('bsttSts','done','✓ Listening complete'); return;
+  }
+  bSTTActive=true;
+  bSTTRec=new SR(); bSTTRec.continuous=true; bSTTRec.interimResults=true;
+  let final='';
+  bSTTRec.onstart=()=>{
+    setSts('bsttSts','listen','🔴 Listening...');
+    document.getElementById('bsttWave').classList.add('on');
+    document.getElementById('bRecBtn').textContent='⏹ Stop';
+    document.getElementById('bRecBtn').classList.add('pulse');
+    flash();
+  };
+  bSTTRec.onresult=e=>{
+    let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final+=e.results[i][0].transcript+' ';
+      else interim+=e.results[i][0].transcript;
+    }
+    document.getElementById('bTx').innerHTML=final+'<em style="opacity:.38">'+interim+'</em>';
+  };
+  bSTTRec.onerror=e=>{ setSts('bsttSts','error','⚠ '+e.error); bSTTActive=false; };
+  bSTTRec.onend=()=>{ if(bSTTActive) bSTTRec.start(); };
+  bSTTRec.start();
+}
+
+/* ═══════════════════════════════════════════════════
+   BROWSER TTS
+═══════════════════════════════════════════════════ */
+function loadBrowserVoices(){
+  bVoices=speechSynthesis.getVoices();
+  const sel=document.getElementById('bVoice');
+  sel.innerHTML=bVoices.map((v,i)=>`<option value="${i}">${v.name} — ${v.lang}</option>`).join('') || '<option>Default Voice</option>';
+  const ei=bVoices.findIndex(v=>v.lang.startsWith('en'));
+  if(ei>=0) sel.value=ei;
+}
+speechSynthesis.onvoiceschanged=loadBrowserVoices;
+loadBrowserVoices();
+
+function browserSpeak(){
+  const text=document.getElementById('bTTS').value.trim();
+  if(!text) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=parseFloat(document.getElementById('bRateR').value);
+  u.pitch=parseFloat(document.getElementById('bPitchR').value);
+  const vi=document.getElementById('bVoice').value;
+  if(bVoices[vi]) u.voice=bVoices[vi];
+  u.onstart=()=>{
+    setSts('bttsSts','speak','🔊 Speaking...');
+    document.getElementById('bttsWave').classList.add('on');
+    document.getElementById('bTTSBtn').classList.add('pulse');
+    flash();
+  };
+  u.onend=()=>{
+    setSts('bttsSts','done','✓ Speech complete');
+    document.getElementById('bttsWave').classList.remove('on');
+    document.getElementById('bTTSBtn').classList.remove('pulse');
+  };
+  u.onerror=e=>{
+    setSts('bttsSts','error','⚠ '+e.error);
+    document.getElementById('bttsWave').classList.remove('on');
+    document.getElementById('bTTSBtn').classList.remove('pulse');
+  };
+  speechSynthesis.speak(u);
+}
+
+/* ═══════════════════════════════════════════════════
+   ADMIN
+═══════════════════════════════════════════════════ */
+async function loadStats(){
+  setSts('admSts','load','Fetching statistics...');
+  try{
+    const r=await fetch(apiUrl('/api/admin/stats'));
+    const j=await r.json();
+    if(j.status==='success'){
+      const d=j.data;
+      const info=document.getElementById('admInfo');
+      info.style.display='block';
+      info.textContent=
+        `📚 Scrolls: ${d.scrolls.total} total, ${d.scrolls.total_words} words\n`+
+        `   Types: ${JSON.stringify(d.scrolls.by_type)}\n\n`+
+        `🔊 Audio Cache: ${d.audio_cache.files} files, ${d.audio_cache.size_mb} MB\n\n`+
+        `⚙️ STT Engine: ${d.engines.stt}\n`+
+        `⚙️ TTS Engine: ${d.engines.tts}`;
+      setSts('admSts','done','✓ Statistics retrieved');
+    }
+  } catch { setSts('admSts','error','⚠ Backend offline'); }
+}
+
+async function clearCache(){
+  if(!confirm('Clear all cached audio files?')) return;
+  try{
+    const r=await fetch(apiUrl('/api/admin/clear-cache'),{method:'DELETE'});
+    const j=await r.json();
+    if(j.status==='success'){ flash(); toast(`🗑️ Cleared ${j.data.cleared} cached files`); setSts('admSts','done','✓ Cache cleared'); }
+  } catch { toast('⚠ Backend offline'); }
+}
+
+/* ═══════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', ()=>{
+  healthCheck();
+  loadBrowserVoices();
+});
+</script>
+</body>
+</html>
